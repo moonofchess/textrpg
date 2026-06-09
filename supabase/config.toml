@@ -1,0 +1,4 @@
+# Supabase 프로젝트 설정 (최소 구성)
+# `supabase link --project-ref nngkzgoniblndxlcqayy` 가 이 project_id 를 참조한다.
+# 전체 기본 설정이 필요하면 `supabase init` 으로 재생성할 수 있다.
+project_id = "nngkzgoniblndxlcqayy"
