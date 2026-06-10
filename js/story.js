@@ -42,6 +42,14 @@ const STORY = {
     },
   },
 
+  // 분대 병사 이름 풀
+  soldierNames: [
+    "한스", "오토", "군터", "빌렘", "데릭", "마르틴", "클라우스", "요르크",
+    "베른", "루카", "핀", "토비", "거스", "렘", "발드", "에밋",
+    "콘라트", "도른", "케닛", "하랄", "스벤", "외팔이 보른", "곰보 야렉", "쥐새끼 핍",
+    "절름발이 콜", "말더듬이 운트", "북부 사내 그림", "고아 닐스",
+  ],
+
   scenes: {
     /* ---------- 도입: 환생 ---------- */
     intro: {
@@ -1308,15 +1316,179 @@ const STORY = {
 
     p3_end: {
       title: "축복이자 저주",
-      onEnter: (G) => { G.setStatus("자작 근위대 십장"); G.mod("reputation", 4); },
+      onEnter: (G) => {
+        G.setStatus("자작 근위대 십장"); G.mod("reputation", 4);
+        if (!G.s.squad || !G.s.squad.length) {
+          const surv = (G.s.cmdResult && G.s.cmdResult.survivors) || 6;
+          G.initSquad(Math.max(5, Math.min(10, surv)));
+        }
+        G.s.skirmishIndex = 0;
+      },
       text: [
         { t: "narr", c: "자작 알브레히트 칼덴이 당신을 부른다. 그의 눈은 당신을 칭찬하는 게 아니라, 저울에 다는 듯하다." },
         { t: "speak", c: "칼덴: “십장이 죽은 자리에서, 네가 열 명을 묶었다. 정식으로 임명한다. 너는 이제 칼덴 근위대의 십장이다.”" },
-        { t: "narr", c: "병사들이 부러운 눈으로 본다. 승진이다. 출세다. 하지만 로완은 안다 — 이건 축복이 아니라, 저주에 가깝다." },
-        { t: "think", c: "이름 없는 병졸일 때는 자기 목숨만 챙기면 됐다. 십장이 된 뒤로는, 열 명의 목숨이 그의 등에 매달렸다." },
+        { t: "narr", c: "병사들이 부러운 눈으로 본다. 승진이다, 출세다. 그러나 로완은 안다. 이건 축복이 아니라 차라리 저주에 가깝다." },
+        { t: "think", c: "이름 없는 병졸일 땐 제 목숨만 챙기면 그만이었다. 십장이 된 뒤로는, 열 명의 목숨이 등에 매달린다." },
       ],
       choices: [
-        { text: "십장의 표식을 받는다.", effect: (G) => { G.give("ledger"); }, continue: true, next: "p3_epilogue" },
+        { text: "십장의 표식을 받고, 부하들의 이름을 새긴다.", effect: (G) => { G.give("ledger"); }, continue: true, next: "squad_intro" },
+      ],
+    },
+
+    /* ---------- 분대 관리 + 추가 교전 3회 ---------- */
+    squad_intro: {
+      title: "나의 열 명",
+      text: (G) => {
+        const arr = [
+          { t: "narr", c: "임명은 종이 한 장이지만, 책임은 살과 피다. 이제 당신에게는 이름을 가진 부하들이 있다. 어제까지 같은 솥의 죽을 나눠 먹던 자들." },
+          { t: "narr", c: "앞으로 자작령을 노리는 세 차례의 큰 싸움이 남았다. 전투 사이사이, 막사에서 부하들을 훈련시키고 상처를 돌볼 수 있다. 죽은 자리는 전투가 끝날 때마다 신병 하나로 메워진다." },
+        ];
+        const roster = (G.s.squad || []).map((s) => s.name + "(★" + s.skill + ")").join("  ·  ");
+        arr.push({ t: "sys", c: "현재 분대 (" + (G.s.squad || []).length + "명): " + roster });
+        arr.push({ t: "think", c: "강한 부대를 만들 재주는 없다. 그저 한 명이라도 덜 죽이고 싶을 뿐이다." });
+        return arr;
+      },
+      choices: [
+        { text: "막사로 가 부대를 점검한다.", continue: true, next: "squad_camp" },
+      ],
+    },
+
+    squad_camp: {
+      title: "막사 — 출진 전",
+      onEnter: (G) => { G.s.campTrained = false; G.s.campRested = false; },
+      text: (G) => {
+        const idx = (G.s.skirmishIndex || 0) + 1;
+        const arr = [
+          { t: "narr", c: "모닥불 가, 부하들이 창을 손질하고 상처를 싸맨다. 다음 싸움 전에 해 둘 일을 챙긴다." },
+          { t: "sys", c: "다가오는 교전: " + idx + " / 3" },
+        ];
+        const roster = (G.s.squad || []).map((s) => s.name + " (체력 " + s.hp + "/" + s.maxHp + ", 기량 ★" + s.skill + ")").join("  ·  ");
+        arr.push({ t: "sys", c: "분대: " + (roster || "없음") });
+        return arr;
+      },
+      choices: (G) => {
+        const woundedMost = (g) => {
+          let w = null;
+          (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; });
+          return w;
+        };
+        const c = [];
+        c.push({
+          text: "전 부대를 굴린다. (기량 ★ +1)",
+          enabled: (g) => !g.s.campTrained && (g.s.squad || []).some((s) => s.skill < 5),
+          lockedText: "더는 못 굴린다",
+          effect: (g) => { g.s.campTrained = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
+          outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 욕설과 신음 끝에, 부하들의 손놀림이 한결 야물어졌다." },
+          next: "squad_camp",
+        });
+        c.push({
+          text: "부대를 쉬게 한다. (전원 체력 회복)",
+          enabled: (g) => !g.s.campRested,
+          lockedText: "이미 쉬었다",
+          effect: (g) => { g.s.campRested = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 12); }); },
+          outcome: { type: "neutral", text: "모닥불 곁에서 언 몸을 녹이고 상처를 싸맨다. 잠깐의 평온이 부하들의 핏기를 돌려놓는다." },
+          next: "squad_camp",
+        });
+        c.push({
+          text: "가장 다친 병사에게 약초를 쓴다.",
+          show: (g) => g.supplyCount("herbs") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
+          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 20); g.s.supplies.herbs -= 1; if (g.s.supplies.herbs <= 0) delete g.s.supplies.herbs; },
+          outcome: { type: "good", text: "가장 성치 않은 병사의 상처에 약초를 짓이겨 바른다." },
+          next: "squad_camp",
+        });
+        c.push({
+          text: "가장 다친 병사를 붕대로 싸맨다.",
+          show: (g) => g.supplyCount("bandage") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
+          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 14); g.s.supplies.bandage -= 1; if (g.s.supplies.bandage <= 0) delete g.s.supplies.bandage; },
+          outcome: { type: "neutral", text: "피 밴 천을 단단히 둘러 출혈을 막는다." },
+          next: "squad_camp",
+        });
+        c.push({
+          text: "사비를 털어 술과 고기로 회식한다. (10닢, 전원 완쾌)",
+          enabled: (g) => g.s.coins >= 10,
+          lockedText: "동전 부족",
+          effect: (g) => { if (g.spend(10)) { (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); g.mod("reputation", 3); } },
+          outcome: { type: "good", text: "오랜만에 고기 굽는 냄새가 막사에 퍼진다. 배부른 병사들의 눈에 생기가 돈다. 지휘관이 제 주머니를 여는 걸, 병사들은 잊지 않는다." },
+          next: "squad_camp",
+        });
+        c.push({ text: "출진한다. 다음 교전으로.", continue: true, next: "skirmish" });
+        return c;
+      },
+    },
+
+    skirmish: {
+      skirmish: {
+        battles: [
+          {
+            pressure: 12,
+            intro: [
+              { t: "danger", c: "첫 임무. 패주한 도적 잔당이 인근 마을을 노린다. 이들을 길목에서 끊어야 한다." },
+              { t: "think", c: "큰 싸움은 아니다. 하지만 부하들에겐 첫 시험이다. 한 명도 잃지 않고 끝내고 싶다." },
+            ],
+            waves: [
+              { threat: 3, desc: [{ t: "narr", c: "제1파. 굶주린 도적 몇이 칼을 들고 달려든다." }] },
+              { threat: 3, desc: [{ t: "narr", c: "제2파. 우두머리가 부하들을 다그치며 밀어붙인다." }] },
+              { threat: 4, desc: [{ t: "danger", c: "제3파. 궁지에 몰린 도적들이 마지막으로 한꺼번에 덤빈다." }] },
+            ],
+          },
+          {
+            pressure: 18,
+            intro: [
+              { t: "danger", c: "두 번째 임무. 남하하는 피난민 행렬을 호위한다. 그러나 그들을 뒤쫓는 건 사람만이 아니다." },
+              { t: "think", c: "지킬 게 늘면, 죽을 자리도 는다. 부하도 피난민도, 둘 다 살려야 한다." },
+            ],
+            waves: [
+              { threat: 4, desc: [{ t: "narr", c: "제1파. 약탈을 노린 무뢰배들이 행렬 꽁무니를 친다." }] },
+              { threat: 4, desc: [{ t: "danger", c: "제2파. 잿빛 늑대 무리가 피 냄새를 맡고 측면으로 파고든다." }] },
+              { threat: 5, desc: [{ t: "danger", c: "제3파. 변이한 석피 멧돼지 한 마리가 행렬로 돌진해 온다." }] },
+            ],
+          },
+          {
+            pressure: 22,
+            intro: [
+              { t: "danger", c: "마지막 싸움. 밤하늘의 검은 별이 유난히 또렷한 밤, 흑성에 물든 것들이 전초를 두드린다. 자작군 전체가 긴장한다." },
+              { t: "think", c: "여기서 버티면 겨울을 넘긴다. 못 버티면, 이 변경은 통째로 어둠에 먹힌다." },
+            ],
+            waves: [
+              { threat: 5, desc: [{ t: "danger", c: "제1파. 늪지 시체병이 비틀거리며 끝없이 밀려온다." }] },
+              { threat: 5, desc: [{ t: "danger", c: "제2파. 잿빛 까마귀 떼가 하늘을 까맣게 덮고 강하한다." }] },
+              { threat: 6, desc: [{ t: "danger", c: "제3파. 부식된 갑옷의 암흑 기사가 하급 마물을 이끌고 전열을 노린다." }] },
+              { threat: 6, desc: [{ t: "danger", c: "최후의 파도. 동이 트기 직전, 어둠이 마지막 발악을 한다. 한 번만 더 버텨라!" }] },
+            ],
+          },
+        ],
+        onComplete: (G, r) => {
+          G.s.skirmishIndex = (G.s.skirmishIndex || 0) + 1;
+          G.s.lastDead = r.dead;
+          G.mod("reputation", r.result === "held" ? 6 : 2);
+          G.addCoins(8);
+          return "skirmish_after";
+        },
+      },
+    },
+
+    skirmish_after: {
+      title: "교전이 끝나고",
+      onEnter: (G) => {
+        G.mod("hunger", -5); G.addRation(1);
+        if ((G.s.skirmishIndex || 0) < 3 && (G.s.squad || []).length < 10) {
+          const r = G.recruit();
+          G.s.lastRecruit = r.name;
+        } else {
+          G.s.lastRecruit = null;
+        }
+      },
+      text: (G) => {
+        const arr = [{ t: "narr", c: "싸움이 끝났다. 살아남은 자들이 거친 숨을 고르며 무기를 내린다." }];
+        const dead = G.s.lastDead || [];
+        if (dead.length) arr.push({ t: "sys", c: "전사: " + dead.join(", ") + ". 이름을 장부에서 지운다." });
+        else arr.push({ t: "narr", c: "이번엔 한 명도 잃지 않았다. 드문 일이다." });
+        if (G.s.lastRecruit) arr.push({ t: "narr", c: "빈자리를 메우러 신병 " + G.s.lastRecruit + "이(가) 합류했다. 겁먹은 눈이지만, 손에 창은 쥐고 있다. 어차피 다들 그렇게 시작했다." });
+        return arr;
+      },
+      choices: [
+        { text: "막사로 돌아가 다음 싸움을 준비한다.", show: (G) => (G.s.skirmishIndex || 0) < 3, continue: true, next: "squad_camp" },
+        { text: "…그렇게, 긴 겨울이 지났다. (1부 완결)", show: (G) => (G.s.skirmishIndex || 0) >= 3, continue: true, next: "p3_epilogue" },
       ],
     },
 
@@ -1332,6 +1504,11 @@ const STORY = {
         ];
         if (G.flag("boar_won")) arr.push({ t: "sys", c: "기록: 창 한 자루로 3등급 마물 석피 멧돼지를 잡았다." });
         arr.push({ t: "sys", c: "기록: 첫 지휘에서 " + r.survivors + "/" + r.maxSquad + "을 살려냈다." });
+        const sq = G.s.squad || [];
+        if (sq.length) {
+          arr.push({ t: "sys", c: "끝까지 살아남은 분대 (" + sq.length + "명): " + sq.map((s) => s.name).join(", ") });
+          arr.push({ t: "narr", c: "세 번의 겨울 싸움을 함께 넘긴 얼굴들. 누군가는 묻혔고, 누군가는 새로 들어왔다. 그래도 이 열 명만은, 로완이 끝까지 데려가야 할 사람들이다." });
+        }
         arr.push({ t: "narr", c: "1부의 마지막 정서는 이것이다 — 빵 한 덩이를 위해 머리를 조아리던 아이가, 이제 열 명의 빵을 책임진다. 무게는 늘었고, 굶주림은 끝나지 않았다." });
         arr.push({ t: "think", c: "다음 겨울, 자작은 정치적 이유로 패전의 책임을 뒤집어쓸 것이다. 그리고 버려진 병사들 사이에서, 나는 또 다른 무언가가 되어야 할 것이다. …하지만 그건, 2부의 이야기다." });
         arr.push({ t: "sys", c: "▶ 2부 「거지 남작」 — 깨진방패단의 이야기는 다음 장에서 이어집니다. (현재 1부 전체 플레이 가능)" });

@@ -9,11 +9,13 @@
 
   // ---- 스탯 정의 ----
   const STAT_DEFS = [
-    { key: "hunger", name: "허기", hint: "낮을수록 굶주린다" },
-    { key: "health", name: "체력", hint: "0이 되면 죽는다" },
-    { key: "awareness", name: "눈치", hint: "청연의 밑바닥 감각" },
-    { key: "reputation", name: "평판", hint: "이름이 알려진 정도" },
+    { key: "hunger", name: "허기", hint: "낮을수록 굶주린다", bar: true },
+    { key: "health", name: "체력", hint: "0이 되면 죽는다", bar: true },
+    { key: "awareness", name: "눈치", hint: "밑바닥에서 갈고닦은 감각 (상한 없음)" },
+    { key: "reputation", name: "평판", hint: "이름이 알려진 정도 (상한 없음)" },
   ];
+  // 상한(0~100)이 있는 스탯. 나머지는 0 이상으로만 제한, 상한 없음.
+  const CAPPED = { hunger: true, health: true };
 
   function defaultState() {
     return {
@@ -25,6 +27,8 @@
       flags: {},
       inventory: [],
       supplies: {},
+      squad: [],
+      skirmishIndex: 0,
       phase: "1부 1페이즈",
       location: "진흙골",
       status: "진흙골의 아이",
@@ -37,9 +41,12 @@
   const G = {
     get s() { return state; },
     mod(stat, delta) {
-      state.stats[stat] = clamp(state.stats[stat] + delta, 0, 100);
+      const v = state.stats[stat] + delta;
+      state.stats[stat] = CAPPED[stat] ? clamp(v, 0, 100) : Math.max(0, v);
     },
-    set(stat, val) { state.stats[stat] = clamp(val, 0, 100); },
+    set(stat, val) {
+      state.stats[stat] = CAPPED[stat] ? clamp(val, 0, 100) : Math.max(0, val);
+    },
     give(id) {
       if (!state.inventory.includes(id)) {
         state.inventory.push(id);
@@ -62,6 +69,29 @@
       if (s) G.toast("획득: " + s.name + (n > 1 ? " ×" + n : ""));
     },
     supplyCount(id) { return (state.supplies && state.supplies[id]) || 0; },
+    makeSoldier(minSkill, maxSkill) {
+      const names = (typeof STORY !== "undefined" && STORY.soldierNames) || ["병사"];
+      if (!state.squad) state.squad = [];
+      const used = new Set(state.squad.map((s) => s.name));
+      let name = names[Math.floor(Math.random() * names.length)];
+      let tries = 0;
+      while (used.has(name) && tries++ < 40) name = names[Math.floor(Math.random() * names.length)];
+      if (used.has(name)) name = name + " 2세";
+      const skill = minSkill + Math.floor(Math.random() * (maxSkill - minSkill + 1));
+      const maxHp = 16 + skill * 3;
+      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill };
+    },
+    initSquad(n) {
+      state.squad = [];
+      for (let i = 0; i < n; i++) state.squad.push(G.makeSoldier(1, 4));
+    },
+    recruit() {
+      if (!state.squad) state.squad = [];
+      const s = G.makeSoldier(1, 3);
+      state.squad.push(s);
+      return s;
+    },
+    squadAlive() { return (state.squad || []).filter((s) => s.hp > 0).length; },
     nextDay() { state.day += 1; },
     setStatus(t) { state.status = t; },
     setLocation(l) { state.location = l; },
@@ -171,63 +201,73 @@
     STAT_DEFS.forEach((d) => {
       const v = state.stats[d.key];
       const div = document.createElement("div");
-      div.className = "stat";
       div.title = d.hint;
-      div.innerHTML =
-        '<div class="stat-top"><span class="stat-name">' + d.name +
-        '</span><span class="stat-val">' + v + "</span></div>" +
-        '<div class="stat-bar"><div class="stat-fill ' + d.key +
-        (v <= 20 ? " low" : "") + '" style="width:' + v + '%"></div></div>';
+      if (d.bar) {
+        div.className = "stat";
+        div.innerHTML =
+          '<div class="stat-top"><span class="stat-name">' + d.name +
+          '</span><span class="stat-val">' + v + " / 100</span></div>" +
+          '<div class="stat-bar"><div class="stat-fill ' + d.key +
+          (v <= 20 ? " low" : "") + '" style="width:' + v + '%"></div></div>';
+      } else {
+        div.className = "stat stat-num";
+        div.innerHTML =
+          '<span class="stat-name">' + d.name + "</span>" +
+          '<span class="stat-val">' + v + "</span>";
+      }
       wrap.appendChild(div);
     });
 
-    // 소지품
-    const inv = el("inventory-list");
-    inv.innerHTML = "";
-    if (state.inventory.length === 0) {
-      inv.innerHTML = '<li class="empty">없음</li>';
-    } else {
-      state.inventory.forEach((id) => {
-        const it = STORY.items[id] || { name: id, desc: "" };
-        const li = document.createElement("li");
-        if (it.consumable) li.classList.add("consumable");
-        let html = '<div class="item-row"><span class="item-name">' + it.name + "</span>";
-        if (it.consumable) html += '<button class="item-use">사용</button>';
-        html += "</div>";
-        if (it.desc) html += '<span class="item-desc">' + it.desc + "</span>";
-        li.innerHTML = html;
-        if (it.consumable) {
-          const btn = li.querySelector(".item-use");
-          if (btn) btn.addEventListener("click", () => useItem(id));
-        }
-        inv.appendChild(li);
-      });
-    }
+    renderItems();
+  }
 
-    // 물자 (수량형 소모품)
-    const sup = el("supplies-list");
-    if (sup) {
-      sup.innerHTML = "";
-      const entries = Object.keys(state.supplies || {}).filter((id) => state.supplies[id] > 0);
-      if (entries.length === 0) {
-        sup.innerHTML = '<li class="empty">없음</li>';
-      } else {
-        entries.forEach((id) => {
-          const s = (STORY.supplies && STORY.supplies[id]) || { name: id, desc: "" };
-          const n = state.supplies[id];
-          const li = document.createElement("li");
-          li.classList.add("consumable");
-          let html = '<div class="item-row"><span class="item-name">' + s.name +
-            ' <span class="item-qty">×' + n + "</span></span>";
-          html += '<button class="item-use">사용</button></div>';
-          if (s.desc) html += '<span class="item-desc">' + s.desc + "</span>";
-          li.innerHTML = html;
-          const btn = li.querySelector(".item-use");
-          if (btn) btn.addEventListener("click", () => useSupply(id));
-          sup.appendChild(li);
-        });
+  function renderInventoryList(invEl) {
+    invEl.innerHTML = "";
+    if (!state.inventory.length) { invEl.innerHTML = '<li class="empty">없음</li>'; return; }
+    state.inventory.forEach((id) => {
+      const it = STORY.items[id] || { name: id, desc: "" };
+      const li = document.createElement("li");
+      if (it.consumable) li.classList.add("consumable");
+      let html = '<div class="item-row"><span class="item-name">' + it.name + "</span>";
+      if (it.consumable) html += '<button class="item-use">사용</button>';
+      html += "</div>";
+      if (it.desc) html += '<span class="item-desc">' + it.desc + "</span>";
+      li.innerHTML = html;
+      if (it.consumable) {
+        const btn = li.querySelector(".item-use");
+        if (btn) btn.addEventListener("click", () => useItem(id));
       }
-    }
+      invEl.appendChild(li);
+    });
+  }
+
+  function renderSuppliesList(supEl) {
+    supEl.innerHTML = "";
+    const entries = Object.keys(state.supplies || {}).filter((id) => state.supplies[id] > 0);
+    if (!entries.length) { supEl.innerHTML = '<li class="empty">없음</li>'; return; }
+    entries.forEach((id) => {
+      const s = (STORY.supplies && STORY.supplies[id]) || { name: id, desc: "" };
+      const n = state.supplies[id];
+      const li = document.createElement("li");
+      li.classList.add("consumable");
+      let html = '<div class="item-row"><span class="item-name">' + s.name +
+        ' <span class="item-qty">×' + n + "</span></span>";
+      html += '<button class="item-use">사용</button></div>';
+      if (s.desc) html += '<span class="item-desc">' + s.desc + "</span>";
+      li.innerHTML = html;
+      const btn = li.querySelector(".item-use");
+      if (btn) btn.addEventListener("click", () => useSupply(id));
+      supEl.appendChild(li);
+    });
+  }
+
+  function renderItems() {
+    ["inventory-list", "bag-inventory-list"].forEach((id) => {
+      const e = el(id); if (e) renderInventoryList(e);
+    });
+    ["supplies-list", "bag-supplies-list"].forEach((id) => {
+      const e = el(id); if (e) renderSuppliesList(e);
+    });
   }
 
   function paragraphsToHTML(arr) {
@@ -268,6 +308,7 @@
     // 미니 시스템 위임 (전투 / 지휘)
     if (scene.combat && window.Combat) { window.Combat.start(scene.combat); return; }
     if (scene.command && window.Command) { window.Command.start(scene.command); return; }
+    if (scene.skirmish && window.Skirmish) { window.Skirmish.start(scene.skirmish); return; }
 
     el("scene-title").textContent = typeof scene.title === "function" ? scene.title(G) : scene.title;
     const textArr = typeof scene.text === "function" ? scene.text(G) : scene.text;
@@ -476,6 +517,10 @@
   }
   function closeBoard() { el("board-modal").classList.remove("active"); }
 
+  // ===== 소지품 팝업 =====
+  function openBag() { renderItems(); el("bag-modal").classList.add("active"); }
+  function closeBag() { el("bag-modal").classList.remove("active"); }
+
   // ===== 새 게임 / 이어하기 =====
   function newGame() {
     state = defaultState();
@@ -498,8 +543,10 @@
 
     el("btn-codex").addEventListener("click", openCodex);
     el("btn-board").addEventListener("click", openBoard);
+    el("btn-bag").addEventListener("click", openBag);
     el("codex-close").addEventListener("click", closeCodex);
     el("board-close").addEventListener("click", closeBoard);
+    el("bag-close").addEventListener("click", closeBag);
     el("board-name-save").addEventListener("click", () => {
       if (window.Cloud) {
         window.Cloud.setPlayerName(el("board-name").value);
@@ -517,8 +564,11 @@
     el("board-modal").addEventListener("click", (e) => {
       if (e.target === el("board-modal")) closeBoard();
     });
+    el("bag-modal").addEventListener("click", (e) => {
+      if (e.target === el("bag-modal")) closeBag();
+    });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeCodex(); closeBoard(); }
+      if (e.key === "Escape") { closeCodex(); closeBoard(); closeBag(); }
     });
   }
 

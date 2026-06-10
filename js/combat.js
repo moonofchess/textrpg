@@ -402,6 +402,172 @@
     },
   };
 
+  /* =====================================================
+     교전 (Skirmish) — 이름·스탯을 가진 분대 단위 전투
+     config = {
+       battles: [ { intro:[..], pressure?, waves:[{threat, desc:[..]}] }, ... ],
+       onComplete(G, result) -> next   // result={survivors, dead:[names], result}
+     }
+     state.squad = [{name,hp,maxHp,skill}], state.skirmishIndex 로 회차 선택
+  ===================================================== */
+  function rosterHTML(squad) {
+    const living = squad.filter((s) => s.hp > 0);
+    if (!living.length) return '<div class="cmd-wave"><p class="danger">남은 병사가 없다.</p></div>';
+    let h = '<div class="roster">';
+    living.forEach((s) => {
+      const pct = clamp(Math.round((s.hp / s.maxHp) * 100), 0, 100);
+      let stars = "";
+      for (let i = 0; i < 5; i++) stars += i < s.skill ? "★" : "☆";
+      const low = s.hp <= s.maxHp * 0.34 ? " low" : "";
+      h += '<div class="soldier' + low + '"><div class="sol-top"><span class="sol-name">' + s.name +
+        '</span><span class="sol-skill">' + stars + "</span></div>" +
+        '<div class="sol-bar"><div class="sol-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="sol-hp">' + Math.max(0, s.hp) + " / " + s.maxHp + "</div></div>";
+    });
+    h += "</div>";
+    return h;
+  }
+  window.rosterHTML = rosterHTML;
+
+  const Skirmish = {
+    start(config) {
+      const G = window.G;
+      const idx = G.s.skirmishIndex || 0;
+      const battle = config.battles[idx] || config.battles[config.battles.length - 1];
+      this._cfg = config;
+      this._battle = battle;
+      this._st = {
+        pressure: clamp(typeof battle.pressure === "number" ? battle.pressure : 15, 0, 100),
+        wave: 0,
+        deadNames: [],
+        log: (battle.intro || []).slice(),
+      };
+      this._render();
+    },
+
+    _living() { return (window.G.s.squad || []).filter((s) => s.hp > 0); },
+
+    _render() {
+      const G = window.G, st = this._st, battle = this._battle;
+      const idx = (G.s.skirmishIndex || 0) + 1;
+      el("scene-title").textContent = "교전 " + idx + "/3 — 제 " + (st.wave + 1) + " 파";
+      const wave = battle.waves[st.wave];
+      let html = '<div class="cmd-panel">';
+      html += bar("적 압력", st.pressure, 100, "pressure");
+      html += "</div>";
+      html += rosterHTML(G.s.squad || []);
+      if (wave) html += '<div class="cmd-wave">' + wave.desc.map((p) => '<p class="' + (p.t || "narr") + '">' + p.c + "</p>").join("") + "</div>";
+      html += logHTML(st.log);
+      el("scene-text").innerHTML = html;
+
+      const cw = el("choices");
+      cw.innerHTML = "";
+      const self = this;
+      actionBtn(cw, "“담 밑으로 기어!” — 엄폐", "사상 최소 · 진지 양보", () => self._order("cover"));
+      actionBtn(cw, "“창 들어, 버텨!” — 전열 유지", "적 격퇴 · 부상 위험", () => self._order("hold"));
+      actionBtn(cw, "“골목으로 유인!” — 매복", "눈치 판정 · 대박/쪽박", () => self._order("ambush"));
+      actionBtn(cw, "“줄 맞춰 물러나!” — 질서 후퇴", "병사 회복 · 진지 양보", () => self._order("retreat"));
+      el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+
+    _distribute(amount) {
+      const G = window.G;
+      const log = [];
+      // 로완도 일부를 짊어진다
+      const romanShare = Math.round(amount * 0.15);
+      if (romanShare > 0) { G.mod("health", -romanShare); FX.flash("hit"); }
+      let rest = amount - romanShare;
+      let guard = 0;
+      while (rest > 0 && guard++ < 30) {
+        const living = this._living();
+        if (!living.length) break;
+        const tgt = living[Math.floor(Math.random() * living.length)];
+        const hit = Math.min(rest, G.rand(5, 11));
+        tgt.hp -= hit;
+        rest -= hit;
+        if (tgt.hp <= 0) {
+          tgt.hp = 0;
+          this._st.deadNames.push(tgt.name);
+          log.push({ t: "danger", c: tgt.name + "이(가) 쓰러졌다." });
+          FX.shake();
+        }
+      }
+      // 사망자 제거
+      G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0);
+      if (amount > 0) FX.floatDmg("-" + amount, "player");
+      return log;
+    },
+
+    _order(order) {
+      const G = window.G, st = this._st, battle = this._battle;
+      const wave = battle.waves[st.wave];
+      const threat = wave.threat || 4;
+      const living = this._living();
+      const power = living.reduce((a, s) => a + s.skill, 0) + Math.floor((G.s.stats.awareness || 0) / 20);
+      let incoming = 0, dPressure = 0;
+      const log = [];
+
+      if (order === "cover") {
+        incoming = Math.round(threat * 1.5);
+        dPressure = +12;
+        log.push({ t: "narr", c: "“전부 담 밑으로!” 화살과 발톱이 머리 위를 스친다. 몸은 지켰지만 적이 한 걸음 더 들어왔다." });
+      } else if (order === "hold") {
+        incoming = Math.max(0, threat * 4 - power * 2);
+        dPressure = -16;
+        log.push({ t: "good", c: "“창 내려놓는 놈은 내 손에 죽는다!” 전열이 적을 창벽으로 받아낸다." });
+      } else if (order === "ambush") {
+        const chance = clamp((G.s.stats.awareness || 0) + 10, 10, 90);
+        const roll = rand(1, 100);
+        if (roll <= chance) {
+          incoming = Math.round(threat * 1);
+          dPressure = -28;
+          log.push({ t: "good", c: "좁은 길로 적을 흘려 넣어 가둔다. 갇힌 적이 우리 창에 쓰러진다. [" + chance + "% / " + roll + "]" });
+        } else {
+          incoming = Math.round(threat * 5);
+          dPressure = +8;
+          log.push({ t: "bad", c: "유인이 어긋났다. 오히려 우리가 몰려 난전이 벌어진다. [" + chance + "% / " + roll + "]" });
+        }
+      } else if (order === "retreat") {
+        incoming = Math.round(threat * 1);
+        dPressure = +12;
+        this._living().forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 3); });
+        log.push({ t: "narr", c: "“줄 맞춰서, 천천히! 등 보이지 마라!” 질서 있게 물러나며 부상자를 추스른다." });
+      }
+
+      if (incoming > 0) log.push(...this._distribute(incoming));
+      else { FX.floatDmg("격퇴", "dodge"); }
+      st.pressure = clamp(st.pressure + dPressure, 0, 100);
+
+      window.REFRESH_SIDEBAR && window.REFRESH_SIDEBAR();
+      st.log.push(...log);
+
+      if (this._living().length <= 0) { this._finish("wiped"); return; }
+      if (st.pressure >= 100) { this._finish("overrun"); return; }
+      if (G.s.stats.health <= 0) { window.GO("game_over"); return; }
+
+      st.wave++;
+      if (st.wave >= battle.waves.length) { this._finish("held"); return; }
+      this._render();
+    },
+
+    _finish(result) {
+      const G = window.G, cfg = this._cfg, st = this._st;
+      const summary = { survivors: this._living().length, dead: st.deadNames, result: result };
+      const next = cfg.onComplete(G, summary);
+      window.REFRESH_SIDEBAR && window.REFRESH_SIDEBAR();
+      el("scene-title").textContent = "교전 종료";
+      let head;
+      if (result === "held") head = "적이 물러났다. 분대는 전선을 지켜냈다.";
+      else if (result === "wiped") head = "분대가 전멸했다. 당신만이 살아 남았다.";
+      else head = "압력을 버티지 못하고 진지를 내주며 후퇴한다.";
+      st.log.push({ t: result === "held" ? "good" : "danger", c: head });
+      if (st.deadNames.length) st.log.push({ t: "sys", c: "전사: " + st.deadNames.join(", ") });
+      el("scene-text").innerHTML = rosterHTML(G.s.squad || []) + logHTML(st.log);
+      showOutcomeThenGo(null, next);
+    },
+  };
+
   window.Combat = Combat;
   window.Command = Command;
+  window.Skirmish = Skirmish;
 })();
