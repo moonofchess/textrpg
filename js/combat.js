@@ -139,6 +139,7 @@
       html += '<div class="cbt-panel">';
       html += '<div class="cbt-enemy"><span class="cbt-grade">' + (e.grade || "") + "</span>" +
         '<span class="cbt-ename">' + e.name + "</span></div>";
+      if (e.art) html += '<div class="cbt-art"><img src="assets/img/' + e.art + '.png" alt="" onerror="this.parentNode.style.display=\'none\'"></div>';
       html += bar("적 체력", st.ehp, st.emax, "ehp");
       html += pips("틈(개방)", st.opening, 3);
       html += "</div>";
@@ -172,7 +173,7 @@
       const log = [];
 
       if (action === "strike") {
-        let dmg = (cfg.baseDmg || 6) + st.opening * 5;
+        let dmg = (cfg.baseDmg || 6) + st.opening * 5 + (G.s.stats.attack || 0);
         if (G.has && G.has("whetstone")) dmg += 3;
         if (intent.type === "guarded") dmg = Math.round(dmg * 1.6);
         dealt = dmg;
@@ -180,7 +181,7 @@
         if (st.opening > 0) log.push({ t: "good", c: "벌려둔 틈으로 깊이 박혔다." });
         st.opening = 0;
       } else if (action === "dodge") {
-        const chance = clamp((G.s.stats.awareness || 0) + cbonus - st.focusPenalty, 5, 95);
+        const chance = clamp((G.s.stats.awareness || 0) + cbonus + (G.s.stats.evasion || 0) * 2 - st.focusPenalty, 5, 95);
         const roll = rand(1, 100);
         if (roll <= chance) {
           dodged = true; enemyDmg = 0;
@@ -199,7 +200,7 @@
         st.focusPenalty = 0;
         log.push({ t: "think", c: "숨을 죽이고 놈의 결을 읽는다. 약점이 보인다. (틈 +2)" });
       } else if (action === "flee") {
-        const chance = clamp((G.s.stats.awareness || 0) + cbonus + 10, 5, 95);
+        const chance = clamp((G.s.stats.awareness || 0) + cbonus + (G.s.stats.evasion || 0) * 2 + 10, 5, 95);
         if (rand(1, 100) <= chance) {
           this._end("flee", [{ t: "narr", c: "등을 보이지 않고 천천히 거리를 벌린다. 청연은 도망도 기술이라 배웠다." }]);
           return;
@@ -212,6 +213,7 @@
         log.push({ t: "bad", c: intent.name + "에 정신이 흔들린다. 다음 회피가 둔해진다." });
       }
       if (enemyDmg > 0 && G.has && G.has("jerkin")) enemyDmg = Math.max(1, Math.round(enemyDmg * 0.75));
+      if (enemyDmg > 0 && (G.s.stats.defense || 0) > 0) enemyDmg = Math.max(1, enemyDmg - (G.s.stats.defense || 0));
       // 액션 이펙트
       if (action === "dodge" && dodged) FX.floatDmg("회피", "dodge");
       if (action === "brace" && enemyDmg < (intent.dmg || 0)) FX.floatDmg("막음", "guard");
@@ -474,7 +476,7 @@
       const G = window.G;
       const log = [];
       // 로완도 일부를 짊어진다
-      const romanShare = Math.round(amount * 0.15);
+      const romanShare = Math.max(0, Math.round(amount * 0.15) - Math.floor((G.s.stats.defense || 0) / 2));
       if (romanShare > 0) { G.mod("health", -romanShare); FX.flash("hit"); }
       let rest = amount - romanShare;
       let guard = 0;
@@ -503,7 +505,7 @@
       const wave = battle.waves[st.wave];
       const threat = wave.threat || 4;
       const living = this._living();
-      const power = living.reduce((a, s) => a + s.skill, 0) + Math.floor((G.s.stats.awareness || 0) / 20);
+      const power = living.reduce((a, s) => a + s.skill, 0) + Math.floor((G.s.stats.awareness || 0) / 20) + Math.floor((G.s.stats.attack || 0) / 3);
       let incoming = 0, dPressure = 0;
       const log = [];
 

@@ -149,15 +149,29 @@ const CODEX = [
       <p>제국 교단의 공식 분류. 같은 종도 흑성 영향을 많이 받으면 한두 등급 올라간다.</p>
       <p><span class="tag">소형 1~2등급</span><span class="tag">중형 3~4등급</span><span class="tag">대형 5~6등급</span><span class="tag">특이 흑성등급</span></p>
       <h4>[1등급] 회색늑대 (Ashwolf) ★★☆☆☆</h4>
+      <img class="codex-img" src="assets/img/mob-ashwolf.png" alt="" onerror="this.style.display='none'">
       <p>붉은 눈, 회색 털. 단독은 병사 한 명이 처리하지만 5~20마리 무리가 문제다. 물린 상처는 발열 위험. 불빛을 두려워한다. 두목을 먼저 처치하면 흩어진다.</p>
       <h4>[1등급] 진창두꺼비 (Bogfiend) ★★☆☆☆</h4>
+      <img class="codex-img" src="assets/img/mob-bogfiend.png" alt="" onerror="this.style.display='none'">
       <p>습지·오염 수원지. 꼬리에서 독침을 쏘고 피부 독액으로 괴사를 일으킨다. 방패로 막고 장거리에서 처리, 맨손 접촉 금지.</p>
       <h4>[2등급] 비늘몸 (Scalecrawler) ★★★☆☆</h4>
+      <img class="codex-img" src="assets/img/mob-scalecrawler.png" alt="" onerror="this.style.display='none'">
       <p>비늘로 덮인 파충류형. 일반 검을 튕긴다. 관절부·목이 약점. 자주색 개체는 흑성 영향이 강하니 2인 이상 대응.</p>
       <h4>[2등급] 잿빛 까마귀 (Ashcrow) ★★★☆☆</h4>
+      <img class="codex-img" src="assets/img/mob-ashcrow.png" alt="" onerror="this.style.display='none'">
       <p>눈 넷, 금속 부리. 20~50마리 떼의 집단 강하가 위협. 강하 전 날카로운 합창이 선행한다 — 그 소리를 배우는 게 변경 생존의 기본. 흑성 심화의 선행 지표.</p>
       <h4>[3등급] 석피 멧돼지 (Stonehide Boar) ★★★★☆</h4>
+      <img class="codex-img" src="assets/img/mob-stonehide-boar.png" alt="" onerror="this.style.display='none'">
       <p>돌 같은 피부의 대형 멧돼지. 정면 돌진은 말도 쓰러뜨린다. 복부·눈이 약점. 정면 금지 — 측면 이탈(로완의 보법) 후 멈춤 구간을 노린다.</p>
+      <h4>[3등급] 늪귀 (Swamp Wraith) ★★★★☆</h4>
+      <img class="codex-img" src="assets/img/mob-swampwraith.png" alt="" onerror="this.style.display='none'">
+      <p>오염된 물가에 깃드는 반수반어형 마물. 사람 울음소리를 흉내 내 밤에 사람을 물가로 꾄다. 물 밖에선 느려지고, 불에 약하다.</p>
+      <h4>[3등급] 늪지 시체병 (Marsh Corpse) ★★★☆☆</h4>
+      <img class="codex-img" src="assets/img/mob-marsh-corpse.png" alt="" onerror="this.style.display='none'">
+      <p>늪과 전장에서 일어난 시체. 느리지만 지치지 않고, 목을 잘라도 움직인다. 불에 태우는 것이 확실하다.</p>
+      <h4>[4등급] 암흑 기사 (Darkknight Wraith) ★★★★★</h4>
+      <img class="codex-img" src="assets/img/mob-darkknight.png" alt="" onerror="this.style.display='none'">
+      <p>인간이 완전히 마물화한 형태로 추정. 부식된 갑옷과 무기를 쓰고 전술적으로 싸우며 하급 마물을 통솔한다. 50m 이내 접근만으로 하급 병사의 사기가 꺾인다. 머리를 제거하거나 불태워야 한다.</p>
       ${seen && seen.evidence ? `<h4>[흑성등급] 거울인 (Mirrorskin) ★★★★★</h4><p>인간과 외형·체온·목소리가 동일. 직사광선 아래 0.5초간 눈동자가 검어지는 것이 유일한 단서. 도시 내부 첩보·암살에 쓰인다. <i>로완의 개방 기억이 진짜 쓸모를 발휘하는 마물.</i></p>` : `<p class="locked-entry">[흑성등급] ??? — 더 깊은 곳에서 마주칠 존재들. 아직 기록되지 않았다.</p>`}
       <h4>대응 위계의 현실</h4>
       <p>제국은 3등급 이상을 기사단으로 처리한다. 그런데 기사단은 변경에 오지 않는다. 그러면 변경은? 불태우고 도망친다. 그것이 변경의 역사다.</p>

@@ -8,18 +8,25 @@
   const SAVE_KEY = "graymarch_save_v1";
 
   // ---- 스탯 정의 ----
-  const STAT_DEFS = [
+  // 사이드바에 바(bar)로 항상 표시되는 스탯 (상한 0~100)
+  const SIDEBAR_STATS = [
     { key: "hunger", name: "허기", hint: "낮을수록 굶주린다", bar: true },
     { key: "health", name: "체력", hint: "0이 되면 죽는다", bar: true },
-    { key: "awareness", name: "눈치", hint: "밑바닥에서 갈고닦은 감각 (상한 없음)" },
-    { key: "reputation", name: "평판", hint: "이름이 알려진 정도 (상한 없음)" },
+  ];
+  // 능력치 — 상태창 팝업에서 확인 (상한 없음)
+  const ABILITY_STATS = [
+    { key: "attack", name: "공격력", hint: "전투에서 주는 피해가 늘어난다" },
+    { key: "defense", name: "방어력", hint: "전투에서 받는 피해가 줄어든다" },
+    { key: "evasion", name: "회피율", hint: "전투에서 회피 성공률이 오른다" },
+    { key: "awareness", name: "눈치", hint: "위험을 먼저 읽는다 (대부분의 판정)" },
+    { key: "reputation", name: "평판", hint: "이름이 알려진 정도" },
   ];
   // 상한(0~100)이 있는 스탯. 나머지는 0 이상으로만 제한, 상한 없음.
   const CAPPED = { hunger: true, health: true };
 
   function defaultState() {
     return {
-      stats: { hunger: 35, health: 55, awareness: 45, reputation: 5 },
+      stats: { hunger: 35, health: 55, awareness: 35, reputation: 0, attack: 3, defense: 3, evasion: 3 },
       coins: 0,
       ration: 0,
       day: 1,
@@ -198,23 +205,16 @@
     // 스탯
     const wrap = el("stats");
     wrap.innerHTML = "";
-    STAT_DEFS.forEach((d) => {
+    SIDEBAR_STATS.forEach((d) => {
       const v = state.stats[d.key];
       const div = document.createElement("div");
       div.title = d.hint;
-      if (d.bar) {
-        div.className = "stat";
-        div.innerHTML =
-          '<div class="stat-top"><span class="stat-name">' + d.name +
-          '</span><span class="stat-val">' + v + " / 100</span></div>" +
-          '<div class="stat-bar"><div class="stat-fill ' + d.key +
-          (v <= 20 ? " low" : "") + '" style="width:' + v + '%"></div></div>';
-      } else {
-        div.className = "stat stat-num";
-        div.innerHTML =
-          '<span class="stat-name">' + d.name + "</span>" +
-          '<span class="stat-val">' + v + "</span>";
-      }
+      div.className = "stat";
+      div.innerHTML =
+        '<div class="stat-top"><span class="stat-name">' + d.name +
+        '</span><span class="stat-val">' + v + " / 100</span></div>" +
+        '<div class="stat-bar"><div class="stat-fill ' + d.key +
+        (v <= 20 ? " low" : "") + '" style="width:' + v + '%"></div></div>';
       wrap.appendChild(div);
     });
 
@@ -270,6 +270,29 @@
     });
   }
 
+  function imgUrl(key) { return key ? "assets/img/" + key + ".png" : null; }
+
+  function setSceneVisuals(scene) {
+    const bgEl = el("scene-bg");
+    if (bgEl) {
+      const bgKey = scene.bg || (STORY.bgByLocation && STORY.bgByLocation[state.location]);
+      if (bgKey) { bgEl.style.backgroundImage = "url('" + imgUrl(bgKey) + "')"; bgEl.classList.add("on"); }
+      else { bgEl.classList.remove("on"); }
+    }
+    const artEl = el("scene-art");
+    if (artEl) {
+      artEl.innerHTML = "";
+      artEl.className = "";
+      if (scene.art && !scene.combat && !scene.command && !scene.skirmish) {
+        const a = scene.art;
+        const key = typeof a === "string" ? a : a.key;
+        const type = (typeof a === "object" && a.type) ? a.type : "portrait";
+        artEl.className = type;
+        artEl.innerHTML = '<img src="' + imgUrl(key) + '" alt="" onerror="this.parentNode.style.display=\'none\'">';
+      }
+    }
+  }
+
   function paragraphsToHTML(arr) {
     return arr
       .map((p) => {
@@ -304,6 +327,7 @@
 
     renderSidebar();
     maybeSubmitRun(scene);
+    setSceneVisuals(scene);
 
     // 미니 시스템 위임 (전투 / 지휘)
     if (scene.combat && window.Combat) { window.Combat.start(scene.combat); return; }
@@ -521,11 +545,31 @@
   function openBag() { renderItems(); el("bag-modal").classList.add("active"); }
   function closeBag() { el("bag-modal").classList.remove("active"); }
 
+  // ===== 능력치(상태창) 팝업 =====
+  function renderStatus() {
+    const body = el("status-body");
+    if (!body) return;
+    let html = '<div class="status-charline">' +
+      '<span class="status-name">로완</span>' +
+      '<span class="status-sub">' + state.status + " · 생존 " + state.day + "일</span></div>";
+    html += '<ul class="status-list">';
+    ABILITY_STATS.forEach((d) => {
+      const v = state.stats[d.key] || 0;
+      html += '<li title="' + d.hint + '"><span class="st-name">' + d.name +
+        '</span><span class="st-val">' + v + '</span><span class="st-hint">' + d.hint + "</span></li>";
+    });
+    html += "</ul>";
+    html += '<div class="status-foot">허기 ' + state.stats.hunger + " / 100 · 체력 " + state.stats.health + " / 100</div>";
+    body.innerHTML = html;
+  }
+  function openStatus() { renderStatus(); el("status-modal").classList.add("active"); }
+  function closeStatus() { el("status-modal").classList.remove("active"); }
+
   // ===== 새 게임 / 이어하기 =====
   function newGame() {
     state = defaultState();
     showScreen("game");
-    go("intro");
+    go("creation_intro");
   }
   function continueGame() {
     if (load()) { showScreen("game"); renderScene(); }
@@ -544,9 +588,11 @@
     el("btn-codex").addEventListener("click", openCodex);
     el("btn-board").addEventListener("click", openBoard);
     el("btn-bag").addEventListener("click", openBag);
+    el("btn-status").addEventListener("click", openStatus);
     el("codex-close").addEventListener("click", closeCodex);
     el("board-close").addEventListener("click", closeBoard);
     el("bag-close").addEventListener("click", closeBag);
+    el("status-close").addEventListener("click", closeStatus);
     el("board-name-save").addEventListener("click", () => {
       if (window.Cloud) {
         window.Cloud.setPlayerName(el("board-name").value);
@@ -567,8 +613,11 @@
     el("bag-modal").addEventListener("click", (e) => {
       if (e.target === el("bag-modal")) closeBag();
     });
+    el("status-modal").addEventListener("click", (e) => {
+      if (e.target === el("status-modal")) closeStatus();
+    });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeCodex(); closeBoard(); closeBag(); }
+      if (e.key === "Escape") { closeCodex(); closeBoard(); closeBag(); closeStatus(); }
     });
   }
 

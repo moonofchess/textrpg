@@ -50,13 +50,131 @@ const STORY = {
     "절름발이 콜", "말더듬이 운트", "북부 사내 그림", "고아 닐스",
   ],
 
+  // 위치 → 배경 일러스트 (장면에 bg가 없으면 위치로 결정)
+  bgByLocation: {
+    "진흙골": "bg-mudhollow",
+    "회색보리 마을": "bg-greybarley",
+    "하윈 성채": "bg-hawin-keep",
+    "하윈 영지 · 호송로": "bg-hawin-keep",
+    "칼덴 군영": "bg-calden-camp",
+    "칼덴 군영 · 외곽": "bg-calden-camp",
+  },
+
   scenes: {
+    /* ---------- 캐릭터 메이킹: 전생의 회상 ---------- */
+    creation_intro: {
+      title: "마지막 겨울",
+      phase: "전생",
+      location: "중원, 뒷골목",
+      status: "개방의 거지 청연",
+      text: [
+        { t: "narr", c: "다리 밑은 얼음장 같았다. 청연은 마른 손에 입김을 불며, 천천히 식어가는 제 몸을 가만히 느꼈다. 거지로 살다 거지로 죽는 밤. 딱히 별다를 것도 없었다." },
+        { t: "narr", c: "흐려지는 의식 사이로, 살아온 날들이 두서없이 흘러갔다." },
+      ],
+      choices: [
+        { text: "…", continue: true, next: "cre_q1" },
+      ],
+    },
+
+    cre_q1: {
+      title: "뒷골목",
+      text: [
+        { t: "narr", c: "비좁은 골목, 썩은 짚더미와 굶주린 그림자들. 수많은 거지 틈에서 그를 살린 건 늘 한 가지였다." },
+      ],
+      choices: [
+        {
+          text: "누가 칼을 품었는지, 어느 길이 막혔는지 먼저 알아챘다.",
+          effect: (G) => { G.mod("awareness", 15); G.mod("evasion", 2); },
+          outcome: { type: "good", text: "청연은 골목의 공기를 읽었다. 위험은 늘 냄새부터 풍겼고, 그는 그 냄새를 맡을 줄 알았다." },
+          next: "cre_q2",
+        },
+        {
+          text: "빼앗기지 않으려면, 주먹이 매워야 했다.",
+          effect: (G) => { G.mod("attack", 6); G.mod("health", 5); },
+          outcome: { type: "good", text: "굶주린 손이었지만 주먹만은 단단했다. 한 번 제대로 휘두르고 나면, 다음부턴 아무도 그의 몫에 손대지 않았다." },
+          next: "cre_q2",
+        },
+        {
+          text: "두들겨 맞아도, 끝끝내 죽지 않았다.",
+          effect: (G) => { G.mod("defense", 6); G.mod("hunger", 10); },
+          outcome: { type: "good", text: "맞는 데 이골이 났다. 급소를 틀고 충격을 흘리며, 그는 늘 다시 일어났다. 질긴 것이 곧 재능이었다." },
+          next: "cre_q2",
+        },
+      ],
+    },
+
+    cre_q2: {
+      title: "벼랑 끝",
+      text: [
+        { t: "narr", c: "죽을 고비는 셀 수 없었다. 그때마다 그를 빼낸 건 늘 같은 버릇이었다." },
+      ],
+      choices: [
+        {
+          text: "싸움이 터지기 전에, 이미 그 자리에 없었다.",
+          effect: (G) => { G.mod("awareness", 8); G.mod("evasion", 4); },
+          outcome: { type: "good", text: "가장 안전한 승리는 싸우지 않는 것. 그는 위험이 닥치기 전에 늘 먼저 사라졌다." },
+          next: "cre_q3",
+        },
+        {
+          text: "도망칠 곳이 없으면, 이를 악물고 맞붙었다.",
+          effect: (G) => { G.mod("attack", 5); G.mod("defense", 3); },
+          outcome: { type: "good", text: "물러설 데가 없을 땐 끝까지 버텼다. 물러서지 않는 자 앞에서는, 다들 한 걸음씩 물러섰다." },
+          next: "cre_q3",
+        },
+        {
+          text: "죽은 척, 숨고, 쥐구멍으로 빠져나왔다.",
+          effect: (G) => { G.mod("evasion", 7); G.mod("awareness", 3); },
+          outcome: { type: "neutral", text: "체면 따위 없었다. 진창에 엎어져 죽은 척, 똥통에 숨기. 결국 살아남은 자가 이긴 자였다." },
+          next: "cre_q3",
+        },
+      ],
+    },
+
+    cre_q3: {
+      title: "사람들",
+      text: [
+        { t: "narr", c: "거지에게도 세상은 결국 사람으로 굴러갔다. 그는 사람들 틈에서 이렇게 처신했다." },
+      ],
+      choices: [
+        {
+          text: "굽신거리며 귀를 열어, 소문을 그러모았다.",
+          effect: (G) => { G.mod("reputation", 5); G.mod("awareness", 4); },
+          outcome: { type: "good", text: "고개를 숙이고 있으면 세상의 소문이 제 발로 굴러들었다. 정보는 곧 목숨값이었다." },
+          next: "creation_done",
+        },
+        {
+          text: "제 입에 든 것도 나눠, 패거리를 챙겼다.",
+          effect: (G) => { G.mod("reputation", 8); G.mod("defense", 2); },
+          outcome: { type: "good", text: "나눈 만큼 등을 맡길 자가 생겼다. 등이 든든한 거지는 쉽게 죽지 않았다." },
+          next: "creation_done",
+        },
+        {
+          text: "아무도 믿지 않고, 혼자 모든 걸 익혔다.",
+          effect: (G) => { G.mod("attack", 3); G.mod("evasion", 3); G.mod("awareness", 3); },
+          outcome: { type: "neutral", text: "기댈 곳이 없으니 전부 혼자 익혔다. 외로웠지만, 배신당할 일도 없었다." },
+          next: "creation_done",
+        },
+      ],
+    },
+
+    creation_done: {
+      title: "그리고, 어둠",
+      text: [
+        { t: "narr", c: "기억의 조각들이 하나둘 흩어지고, 어둠이 다시 짙어진다. 청연의 마지막 숨이 가늘게 멀어져 갔다." },
+        { t: "think", c: "무엇이 남을지는… 살아보면, 알게 되겠지." },
+      ],
+      choices: [
+        { text: "눈을 감는다.", continue: true, next: "intro" },
+      ],
+    },
+
     /* ---------- 도입: 환생 ---------- */
     intro: {
       title: "다시 태어나도 거지",
       phase: "1부 1페이즈",
       location: "진흙골",
       status: "진흙골의 아이",
+      art: { key: "motif-blackstar", type: "scenic" },
       text: [
         { t: "think", c: "거지로 살다 거지로 죽었는데, 다시 눈을 떠보니 또 거지였다." },
         { t: "narr", c: "전생의 이름은 청연. 중원 뒷골목 개방의 말단 거지였다. 고수도 협객도 아니었고, 굶주림과 매질 속을 기어다니다 어느 겨울 다리 밑에서 조용히 식어버렸다. 가진 재주라곤 하나, 살아남는 법뿐이었다. 그것만은 어지간한 무림인보다 지독하게 알았다." },
@@ -118,6 +236,7 @@ const STORY = {
 
     mara: {
       title: "늙은 마라",
+      art: "port-mara",
       text: [
         { t: "narr", c: "도랑 끝, 한쪽으로 기운 판잣집. 늙은 마라가 제 몫의 죽을 절반쯤 덜어 이 빠진 그릇에 담는다. 친어머니는 아니다. 그저 갈 곳 없는 아이들을 되는대로 거두어 먹이는 늙은 여자다." },
         { t: "speak", c: "마라: “또 못 비집고 왔구나, 미련한 것. 그래도 안 맞고 온 게 어디냐.”" },
@@ -133,6 +252,7 @@ const STORY = {
 
     lisa: {
       title: "독한 계집애",
+      art: "port-lisa",
       onEnter: (G) => { G.setFlag("lisa_known"); },
       text: [
         { t: "narr", c: "무너진 수레 그늘 아래, 또래보다 한두 살 위로 보이는 소녀가 마른 약초를 다듬고 있다. 리사. 이 동네에서 제일 독하고, 제일 눈이 밝은 아이다." },
@@ -172,6 +292,7 @@ const STORY = {
     /* ---------- 마을 진입: 고구마(몰트) ---------- */
     to_village: {
       title: "회색보리 마을",
+      art: "port-molt",
       location: "회색보리 마을",
       onEnter: (G) => { G.mod("hunger", -5); },
       text: [
@@ -204,6 +325,7 @@ const STORY = {
 
     meet_bram: {
       title: "경비대장 브람",
+      art: "port-bram",
       text: [
         { t: "narr", c: "초소 안. 절뚝이는 다리, 낡은 가죽갑옷, 희끗한 수염. 피곤에 절은 사내가 당신을 올려다본다. 경비대장 브람이다." },
         { t: "speak", c: "브람: “일거리라. 마침 손이 모자라긴 하지. 물 긷고 창고 치우고, 시키는 건 군말 없이 한다. 급료는 없고 저녁에 식은 죽 한 그릇. 싫으면 도랑으로 꺼져.”" },
@@ -222,6 +344,7 @@ const STORY = {
     /* ---------- 잡역 중 이상 징후 발견 (핵심 눈치 판정) ---------- */
     chores: {
       title: "곡물창고의 그림자",
+      bg: "bg-granary",
       onEnter: (G) => { G.mod("hunger", -6); G.nextDay(); },
       text: [
         { t: "narr", c: "사흘이 흘렀다. 물을 긷고 똥통을 비우고 창고 바닥의 쥐를 잡았다. 병사들은 당신을 '도랑 잡것'이라 부르지만, 적어도 저녁마다 죽은 꼬박꼬박 나온다." },
@@ -291,6 +414,7 @@ const STORY = {
 
     warn_bram: {
       title: "고변(告變)",
+      art: "port-bram",
       text: [
         { t: "narr", c: "브람 앞에 선다. 옆에서 몰트가 코웃음을 친다." },
         { t: "speak", c: "로완: “창고가 털립니다. 외지에서 온 자들이 자물쇠와 목책을 살피고 갔습니다.”" },
@@ -332,6 +456,7 @@ const STORY = {
     /* ---------- 식량창고 습격 ---------- */
     raid_prepared: {
       title: "습격",
+      bg: "bg-battlefield-night",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); },
       text: [
         { t: "narr", c: "이튿날 밤. 브람은 미리 병사 넷을 창고 그늘에 숨겼다. 자정이 지나자, 목책 너머에서 그림자들이 미끄러져 든다. 도적이라기엔 너무 조직적이다. 인신매매단의 무리." },
@@ -365,6 +490,7 @@ const STORY = {
 
     raid_semi: {
       title: "습격",
+      bg: "bg-battlefield-night",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); },
       text: [
         { t: "narr", c: "브람은 당신의 말을 흘려들었지만, 완전히 무시하지도 못했다. 그날 밤, 그는 평소보다 한 명을 더 깨워 두었다." },
@@ -392,6 +518,7 @@ const STORY = {
 
     raid_unprepared: {
       title: "준비 없는 밤",
+      bg: "bg-battlefield-night",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); },
       text: [
         { t: "danger", c: "사흘 뒤 자정. 비명으로 잠이 깬다. 횃불, 연기, 무너지는 목책. 아무도 대비하지 않았다. 식량창고가 불타고, 헛간에서는 아이들이 끌려간다." },
@@ -419,6 +546,7 @@ const STORY = {
 
     raid_resolve: {
       title: "잿더미 아침",
+      art: "port-bram",
       text: (G) => {
         const arr = [
           { t: "narr", c: "동이 튼다. 매캐한 연기 사이로 마을이 피해를 셈한다." },
@@ -443,6 +571,7 @@ const STORY = {
     /* ---------- 첫 보상: 빵, 이름 ---------- */
     first_reward: {
       title: "빵 한 덩이와 이름 한 줄",
+      art: "port-bram",
       onEnter: (G) => {
         G.mod("hunger", 20); G.addRation(1); G.addSupply("bread", 1); G.give("boots");
         G.addCoins(10); G.mod("reputation", 5); G.setStatus("경비대 말단");
@@ -463,6 +592,7 @@ const STORY = {
     village_hub: {
       title: "회색보리 마을 — 장날",
       location: "회색보리 마을",
+      bg: "bg-market",
       text: (G) => {
         const arr = [
           { t: "narr", c: "오랜만에 장이 섰다. 보잘것없는 공터지만, 오늘만은 제법 사람 사는 냄새가 난다. 순무를 쌓아둔 좌판, 절인 생선 통, 헌 옷가지를 늘어놓은 노파. 어딘가에서 싸구려 술 냄새와 누군가의 노랫가락이 흘러나온다." },
@@ -494,6 +624,7 @@ const STORY = {
 
     shop: {
       title: "잡화상 좌판",
+      bg: "bg-market",
       text: [
         { t: "narr", c: "곰보 자국이 있는 잡화상이 이 빠진 저울을 두드린다." },
         { t: "speak", c: "잡화상: “싸게 주는 거야. 요샌 북쪽에서 사람이 자꾸 넘어와서 뭐든 동난다고. 살 거면 빨리 골라.”" },
@@ -523,6 +654,7 @@ const STORY = {
 
     tavern: {
       title: "주점 「깨진 술통」",
+      bg: "bg-tavern",
       text: [
         { t: "narr", c: "그을린 들보에 매달린 등잔, 시큼한 맥주 냄새, 젖은 톱밥이 깔린 바닥. 변경의 주점은 화려할 것도 없지만, 여기엔 마을 어디에도 없는 것이 있다. 사람들의 입이다." },
       ],
@@ -568,6 +700,7 @@ const STORY = {
 
     inn: {
       title: "여관 「잿빛 보리」",
+      bg: "bg-inn",
       text: [
         { t: "narr", c: "삐걱이는 이층 목조 여관. 난로에서 장작이 타고, 위층에서는 누군가의 코 고는 소리가 새어 나온다. 따뜻함을 돈 주고 산다는 것 자체가, 무적자였던 로완에겐 낯선 사치다." },
       ],
@@ -581,9 +714,11 @@ const STORY = {
           next: "village_hub",
         },
         {
-          text: "난롯가에서 잠깐 몸을 녹인다. (무료)",
-          effect: (G) => { G.mod("health", 6); },
-          outcome: { type: "neutral", text: "불 곁에 쪼그려 언 손을 녹인다. 돈 한 푼 안 들이고도, 잠시나마 사람대접을 받는 기분이다." },
+          text: "난롯가에서 잠깐 몸을 녹인다. (무료, 1회)",
+          enabled: (G) => !G.flag("warmed_fire"),
+          lockedText: "여관 주인의 눈치가 보인다",
+          effect: (G) => { G.setFlag("warmed_fire"); G.mod("health", 6); },
+          outcome: { type: "neutral", text: "불 곁에 쪼그려 언 손을 녹인다. 돈 한 푼 안 들이고도, 잠시나마 사람대접을 받는 기분이다. 하지만 여관 주인이 슬슬 눈치를 준다. 공짜 온기에도 끝은 있다." },
           next: "inn",
         },
         { text: "여관을 나선다.", next: "village_hub" },
@@ -636,6 +771,7 @@ const STORY = {
 
     interlude: {
       title: "겨울의 한복판",
+      art: "port-yona",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -4); },
       text: [
         { t: "narr", c: "며칠이 지난다. 창 잡는 법을 배우고, 신참 요나와 같은 열에 선다. 요나는 처음엔 도랑 출신이라며 비웃었지만, 습격이 있던 밤 이후로는 그 입을 다물었다." },
@@ -651,6 +787,7 @@ const STORY = {
     /* ---------- 1페이즈 결말: 마을 방어전 ---------- */
     defense: {
       title: "감시탑의 밤",
+      bg: "bg-battlefield-night",
       onEnter: (G) => { G.give("spear"); G.setStatus("경비병"); },
       text: [
         { t: "narr", c: "감시탑 위. 아래에선 도적과 늑대떼가 정문을 두드리고, 경비대 전원이 그쪽으로 쏠린다. 정문의 함성이 밤공기를 찢는다." },
@@ -684,6 +821,7 @@ const STORY = {
 
     phase1_end: {
       title: "살아남은 놈",
+      art: "port-bram",
       onEnter: (G) => { G.mod("hunger", 10); G.addRation(2); G.mod("health", 10); },
       text: (G) => {
         const arr = [
@@ -751,6 +889,7 @@ const STORY = {
 
     p2_training: {
       title: "창을 잡는 법",
+      art: "port-garen",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -5); },
       text: [
         { t: "narr", c: "성채 마당. 노병 가렌이 병사들을 줄 세운다. 갑옷 입은 자, 맨몸인 자, 신발도 짝짝이인 자. 변경 군대의 민낯이다." },
@@ -782,6 +921,7 @@ const STORY = {
 
     p2_castle: {
       title: "성채의 계급",
+      art: "port-seria",
       onEnter: (G) => { G.mod("hunger", -5); G.nextDay(); },
       text: [
         { t: "narr", c: "성채라고 별수 없다. 결국 또 다른 먹이사슬이다. 기사는 종자를 부리고, 정규병은 잡병을 무시하고, 잡병은 도랑 출신을 짓밟는다. 글자도 명령 체계도 죄다 낯설다." },
@@ -846,6 +986,7 @@ const STORY = {
 
     p2_castle2: {
       title: "수상한 정적",
+      art: "port-edric-hawin",
       text: [
         { t: "narr", c: "며칠 후, 남작 에드릭 하윈이 병사들을 모은다. 마른 얼굴, 깊게 팬 눈가. 검소하지만 무능하진 않은 귀족이다." },
         { t: "speak", c: "하윈: “영지 외곽에 잿빛 늑대 무리가 돌고, 그 꽁무니에 도적이 따라붙는다. 네게 명예는 바라지 않아. 결과만 가져와라. 가서 길목을 정리해.”" },
@@ -875,6 +1016,7 @@ const STORY = {
         enemy: {
           name: "잿빛 늑대 무리",
           grade: "1등급 소형 · 무리",
+          art: "mob-ashwolf",
           maxHp: 28,
           weakness: "두목의 목",
           intro: [
@@ -958,6 +1100,7 @@ const STORY = {
 
     p2_escort_resolve: {
       title: "쓸모 있는 병사",
+      art: "port-edric-hawin",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", 8); G.addRation(2); G.mod("health", 8); G.addSupply("bread", 1); G.addCoins(14); },
       text: (G) => {
         const arr = [{ t: "narr", c: "자작령 성문이 보인다. 그을리고 피곤한 호송대가, 그래도 살아서 도착했다." }];
@@ -997,6 +1140,7 @@ const STORY = {
        ===================================================== */
     p3_bridge: {
       title: "윗선의 부름",
+      art: "port-edric-hawin",
       phase: "1부 3페이즈",
       location: "하윈 성채",
       status: "정규 무장병",
@@ -1033,6 +1177,7 @@ const STORY = {
 
     p3_arrival: {
       title: "칼덴 군영",
+      art: "port-darion",
       location: "칼덴 군영",
       status: "자작 근위대 대원",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); G.setStatus("자작 근위대 대원"); },
@@ -1067,6 +1212,7 @@ const STORY = {
 
     p3_camp: {
       title: "군영의 사람들",
+      art: "port-isabel",
       onEnter: (G) => { G.mod("hunger", -4); },
       text: [
         { t: "narr", c: "막사 한구석, 거구의 사내가 묵묵히 방패를 손질한다. 북부에서 내려온 피난민 병사 헬가. 마물에게 가족을 잃은 눈을 하고 있다. 그 옆엔 말 적은 사냥꾼 출신 척후병 카스." },
@@ -1106,6 +1252,7 @@ const STORY = {
 
     p3_camp_hub: {
       title: "출진 전야",
+      art: "port-kas",
       text: (G) => {
         const arr = [
           { t: "narr", c: "막사에 모닥불이 사위어 간다. 내일이면 첫 임무다. 자작이 직접 신참 점검에 나선다는 소문이 돈다." },
@@ -1165,6 +1312,7 @@ const STORY = {
 
     p3_intro: {
       title: "열 명의 목숨",
+      art: "port-albrecht-calden",
       location: "칼덴 군영 · 외곽",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); },
       text: [
@@ -1196,6 +1344,7 @@ const STORY = {
         enemy: {
           name: "석피 멧돼지",
           grade: "3등급 중형",
+          art: "mob-stonehide-boar",
           maxHp: 42,
           weakness: "드러난 복부",
           intro: [
@@ -1258,6 +1407,7 @@ const STORY = {
     },
 
     p3_command: {
+      bg: "bg-battlefield-night",
       command: {
         intro: [
           { t: "danger", c: "도적과 마물이 동시에 측면을 두드린다. 당신의 등에, 처음으로 열 명의 목숨이 매달렸다." },
@@ -1288,6 +1438,7 @@ const STORY = {
 
     p3_command_after: {
       title: "등에 매달린 무게",
+      art: "port-helga",
       onEnter: (G) => { G.mod("hunger", 6); G.addRation(2); G.mod("health", 6); G.addSupply("bread", 1); G.addCoins(16); },
       text: (G) => {
         const r = G.s.cmdResult || { survivors: 0, maxSquad: 10, casualties: 0, result: "held" };
@@ -1316,6 +1467,7 @@ const STORY = {
 
     p3_end: {
       title: "축복이자 저주",
+      art: "port-albrecht-calden",
       onEnter: (G) => {
         G.setStatus("자작 근위대 십장"); G.mod("reputation", 4);
         if (!G.s.squad || !G.s.squad.length) {
@@ -1355,7 +1507,7 @@ const STORY = {
 
     squad_camp: {
       title: "막사 — 출진 전",
-      onEnter: (G) => { G.s.campTrained = false; G.s.campRested = false; },
+      onEnter: (G) => { G.s.campPrepped = false; },
       text: (G) => {
         const idx = (G.s.skirmishIndex || 0) + 1;
         const arr = [
@@ -1375,17 +1527,17 @@ const STORY = {
         const c = [];
         c.push({
           text: "전 부대를 굴린다. (기량 ★ +1)",
-          enabled: (g) => !g.s.campTrained && (g.s.squad || []).some((s) => s.skill < 5),
-          lockedText: "더는 못 굴린다",
-          effect: (g) => { g.s.campTrained = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
+          enabled: (g) => !g.s.campPrepped && (g.s.squad || []).some((s) => s.skill < 5),
+          lockedText: "출진 준비는 한 번뿐이다",
+          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
           outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 욕설과 신음 끝에, 부하들의 손놀림이 한결 야물어졌다." },
           next: "squad_camp",
         });
         c.push({
           text: "부대를 쉬게 한다. (전원 체력 회복)",
-          enabled: (g) => !g.s.campRested,
-          lockedText: "이미 쉬었다",
-          effect: (g) => { g.s.campRested = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 12); }); },
+          enabled: (g) => !g.s.campPrepped,
+          lockedText: "출진 준비는 한 번뿐이다",
+          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 12); }); },
           outcome: { type: "neutral", text: "모닥불 곁에서 언 몸을 녹이고 상처를 싸맨다. 잠깐의 평온이 부하들의 핏기를 돌려놓는다." },
           next: "squad_camp",
         });
@@ -1405,9 +1557,9 @@ const STORY = {
         });
         c.push({
           text: "사비를 털어 술과 고기로 회식한다. (10닢, 전원 완쾌)",
-          enabled: (g) => g.s.coins >= 10,
-          lockedText: "동전 부족",
-          effect: (g) => { if (g.spend(10)) { (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); g.mod("reputation", 3); } },
+          enabled: (g) => g.s.coins >= 10 && !g.s.campPrepped,
+          lockedText: (G.s.campPrepped ? "출진 준비는 한 번뿐이다" : "동전 부족"),
+          effect: (g) => { if (g.spend(10)) { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); g.mod("reputation", 3); } },
           outcome: { type: "good", text: "오랜만에 고기 굽는 냄새가 막사에 퍼진다. 배부른 병사들의 눈에 생기가 돈다. 지휘관이 제 주머니를 여는 걸, 병사들은 잊지 않는다." },
           next: "squad_camp",
         });
@@ -1417,6 +1569,7 @@ const STORY = {
     },
 
     skirmish: {
+      bg: "bg-battlefield-night",
       skirmish: {
         battles: [
           {
@@ -1523,6 +1676,7 @@ const STORY = {
     /* ---------- 게임 오버 ---------- */
     game_over: {
       title: "진흙으로 돌아가다",
+      art: { key: "cg-gameover", type: "scenic" },
       text: [
         { t: "danger", c: "눈앞이 어두워진다." },
         { t: "narr", c: "청연으로 한 번, 로완으로 또 한 번. 두 번째 삶도 진흙 속에서 식어간다. 장부에 적히지 못한 이름은, 아무도 기억하지 않는다." },

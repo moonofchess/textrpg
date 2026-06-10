@@ -35,6 +35,29 @@ body { position: relative; }
   background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
 }
 
+/* 장면 배경 일러스트 */
+#scene-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  opacity: 0; transition: opacity 0.7s ease;
+}
+#scene-bg.on { opacity: 0.62; }
+#scene-bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(12,11,10,0.28) 0%, rgba(12,11,10,0.45) 55%, rgba(12,11,10,0.68) 100%);
+}
+.screen { position: relative; z-index: 1; }
+
+/* 장면 인물/마물 일러스트 */
+#scene-art { max-width: 720px; }
+#scene-art:not(:empty) { margin-bottom: 18px; animation: fadeUp 0.6s ease both; }
+#scene-art img {
+  display: block; border: 1px solid var(--line); border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6); background: var(--bg-2);
+}
+#scene-art.portrait img { width: 200px; max-width: 45%; float: right; margin: 0 0 12px 18px; border-left: 2px solid var(--amber); }
+#scene-art.scenic img { width: 100%; max-height: 300px; object-fit: cover; }
+
 /* 눈 내림 */
 #snow {
   position: fixed; inset: 0; pointer-events: none; z-index: 40;
@@ -58,7 +81,11 @@ body { position: relative; }
 .screen.active { display: flex; }
 
 /* ===== 타이틀 ===== */
-#title-screen { align-items: center; justify-content: center; }
+#title-screen {
+  align-items: center; justify-content: center;
+  background-image: linear-gradient(rgba(8,7,6,0.62), rgba(8,7,6,0.85)), url("../assets/img/title-bg.png");
+  background-size: cover; background-position: center;
+}
 .title-wrap {
   text-align: center; max-width: 640px; padding: 32px;
   animation: fadeUp 1.1s ease both;
@@ -138,7 +165,20 @@ body { position: relative; }
   cursor: pointer; transition: all 0.15s; position: relative;
 }
 .bag-btn:hover { color: var(--amber-soft); border-color: var(--amber); }
+.char-btns { display: flex; gap: 6px; flex-shrink: 0; }
 .res-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+/* 능력치 팝업 */
+.status-body { padding: 18px 20px; overflow-y: auto; }
+.status-charline { display: flex; align-items: baseline; gap: 10px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.status-name { font-family: "Gowun Batang", serif; font-size: 1.25rem; color: var(--ink); }
+.status-sub { font-size: 0.8rem; color: var(--ink-dim); }
+.status-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.status-list li { display: grid; grid-template-columns: 64px 48px 1fr; align-items: center; gap: 10px; background: var(--bg-2); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 4px; padding: 9px 12px; }
+.status-list .st-name { font-size: 0.9rem; color: var(--ink); font-weight: 700; }
+.status-list .st-val { font-size: 1.15rem; color: var(--amber-soft); font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.status-list .st-hint { font-size: 0.74rem; color: var(--ink-faint); }
+.status-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--ink-dim); text-align: center; }
 .chip {
   display: inline-flex; align-items: baseline; gap: 5px; font-size: 0.8rem; color: var(--ink);
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 3px 10px;
@@ -202,9 +242,10 @@ body { position: relative; }
 .scene-head { margin-bottom: 18px; }
 .scene-title {
   font-family: "Gowun Batang", serif; font-size: 1.7rem; font-weight: 700; color: var(--ink);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }
 .scene-title::after { content: ""; display: block; width: 48px; height: 2px; background: var(--amber); margin-top: 12px; }
-.scene-text { font-family: "Gowun Batang", serif; font-size: 1.08rem; color: var(--ink); max-width: 720px; }
+.scene-text { font-family: "Gowun Batang", serif; font-size: 1.08rem; color: var(--ink); max-width: 720px; text-shadow: 0 1px 3px rgba(0,0,0,0.92), 0 0 10px rgba(0,0,0,0.55); }
 .scene-text p { margin-bottom: 16px; animation: fadeUp 0.6s ease both; }
 .scene-text .narr { color: var(--ink); }
 .scene-text .speak { color: var(--amber-soft); }
@@ -251,6 +292,7 @@ body { position: relative; }
 .codex-content .tag { display: inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 2px; background: var(--bg-2); border: 1px solid var(--line); color: var(--ink-dim); margin: 0 4px 4px 0; }
 .codex-content .locked-entry { color: var(--ink-faint); font-style: italic; }
 .codex-content .quote { font-family: "Gowun Batang", serif; font-style: italic; color: var(--amber-soft); border-left: 2px solid var(--amber); padding-left: 12px; margin: 10px 0; }
+.codex-content .codex-img { display: block; width: 100%; max-width: 300px; border: 1px solid var(--line); border-radius: 6px; margin: 8px 0 12px; background: #0b0908; box-shadow: 0 6px 18px rgba(0,0,0,0.5); }
 
 /* ===== 명예의 전당 ===== */
 .board-body { padding: 22px 26px; overflow-y: auto; }
@@ -332,6 +374,8 @@ body { position: relative; }
   animation: fadeUp 0.4s ease both;
 }
 .cbt-enemy { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.cbt-art { margin: 0 0 12px; text-align: center; }
+.cbt-art img { width: 100%; max-width: 360px; max-height: 260px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #0b0908; box-shadow: 0 6px 22px rgba(0,0,0,0.6); }
 .cbt-grade { font-size: 0.7rem; color: var(--bg); background: var(--blood-soft); padding: 2px 8px; border-radius: 2px; }
 .cbt-ename { font-family: "Gowun Batang", serif; font-size: 1.2rem; color: var(--ink); }
 .cbt-stat { margin-bottom: 8px; }
