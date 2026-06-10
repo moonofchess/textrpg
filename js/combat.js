@@ -37,6 +37,40 @@
     b.addEventListener("click", fn);
     wrap.appendChild(b);
   }
+  // ---- 액션 이펙트 ----
+  const FX = {
+    flash(kind) {
+      const f = document.getElementById("fx-flash");
+      if (!f) return;
+      f.className = "";
+      void f.offsetWidth;
+      f.classList.add("show-" + kind);
+    },
+    shake() {
+      const g = document.querySelector(".game-body") || document.body;
+      g.classList.remove("shake");
+      void g.offsetWidth;
+      g.classList.add("shake");
+      setTimeout(() => g.classList.remove("shake"), 440);
+    },
+    floatDmg(text, kind) {
+      const layer = document.getElementById("fx-layer");
+      if (!layer) return;
+      const span = document.createElement("span");
+      span.className = "float-dmg " + (kind || "");
+      span.textContent = text;
+      const pane = document.querySelector(".story-pane") || document.body;
+      const r = pane.getBoundingClientRect();
+      const x = r.left + r.width * (0.32 + Math.random() * 0.32);
+      const y = r.top + r.height * 0.28 + (kind === "player" ? 46 : 0);
+      span.style.left = x + "px";
+      span.style.top = y + "px";
+      layer.appendChild(span);
+      setTimeout(() => span.remove(), 1000);
+    },
+  };
+  window.FX = FX;
+
   function showOutcomeThenGo(outcome, next) {
     const cw = el("choices");
     cw.innerHTML = "";
@@ -126,7 +160,8 @@
 
     _bonus() {
       const cfg = this._cfg;
-      return typeof cfg.bonus === "function" ? (cfg.bonus(window.G) || 0) : (cfg.bonus || 0);
+      const base = typeof cfg.bonus === "function" ? (cfg.bonus(window.G) || 0) : (cfg.bonus || 0);
+      return base + (window.G.flag("torch_buff") ? 10 : 0);
     },
 
     _act(action) {
@@ -138,6 +173,7 @@
 
       if (action === "strike") {
         let dmg = (cfg.baseDmg || 6) + st.opening * 5;
+        if (G.has && G.has("whetstone")) dmg += 3;
         if (intent.type === "guarded") dmg = Math.round(dmg * 1.6);
         dealt = dmg;
         log.push({ t: "narr", c: "창대를 비틀어 " + (e.weakness || "급소") + "를 내지른다. (" + dmg + " 피해)" });
@@ -175,9 +211,17 @@
         st.focusPenalty = 15;
         log.push({ t: "bad", c: intent.name + "에 정신이 흔들린다. 다음 회피가 둔해진다." });
       }
+      if (enemyDmg > 0 && G.has && G.has("jerkin")) enemyDmg = Math.max(1, Math.round(enemyDmg * 0.75));
+      // 액션 이펙트
+      if (action === "dodge" && dodged) FX.floatDmg("회피", "dodge");
+      if (action === "brace" && enemyDmg < (intent.dmg || 0)) FX.floatDmg("막음", "guard");
+      if (dealt > 0) { FX.floatDmg("-" + dealt, "enemy"); FX.flash("enemy"); }
       if (enemyDmg > 0) {
         G.mod("health", -enemyDmg);
         log.push({ t: "danger", c: "로완이 " + enemyDmg + " 피해를 입었다." });
+        FX.floatDmg("-" + enemyDmg, "player");
+        FX.flash("hit");
+        FX.shake();
       }
       if (dealt > 0) st.ehp = Math.max(0, st.ehp - dealt);
 
@@ -194,6 +238,7 @@
 
     _end(result, extraLog) {
       const G = window.G, cfg = this._cfg, st = this._st;
+      if (G.flag("torch_buff")) G.setFlag("torch_buff", false);
       if (extraLog) st.log.push(...extraLog);
       if (result === "win") st.log.push({ t: "good", c: cfg.enemy.name + "이(가) 쓰러졌다." });
 
@@ -303,10 +348,15 @@
         st.men = Math.max(0, st.men - cas);
         st.casualties += cas;
         log.push({ t: "danger", c: "아군 " + cas + "명이 쓰러졌다." });
+        FX.floatDmg("-" + cas + "명", "player");
+        FX.flash("hit");
+        FX.shake();
+      } else if (dPressure < 0) {
+        FX.floatDmg("격퇴", "dodge");
       }
       st.morale = clamp(st.morale + dMorale, 0, 100);
       st.pressure = clamp(st.pressure + dPressure, 0, 100);
-      if (romanHurt) G.mod("health", -romanHurt);
+      if (romanHurt) { G.mod("health", -romanHurt); FX.flash("hit"); }
 
       // 사기 붕괴 / 압도 처리
       if (st.morale <= 0 && !st.routed) {

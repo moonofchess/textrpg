@@ -154,7 +154,16 @@ body { position: relative; }
 #inventory-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
 #inventory-list li { font-size: 0.82rem; color: var(--ink); padding: 6px 9px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 3px; border-left: 2px solid var(--amber); }
 #inventory-list li.empty { color: var(--ink-faint); border-left-color: var(--line); }
-#inventory-list li .item-desc { display: block; font-size: 0.7rem; color: var(--ink-faint); margin-top: 2px; }
+#inventory-list li.consumable { border-left-color: var(--green); }
+#inventory-list li .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#inventory-list li .item-name { flex: 1; }
+#inventory-list li .item-use {
+  font-family: inherit; font-size: 0.72rem; color: var(--green);
+  background: rgba(155,192,112,0.1); border: 1px solid var(--green); border-radius: 3px;
+  padding: 2px 9px; cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+#inventory-list li .item-use:hover { background: var(--green); color: var(--bg); }
+#inventory-list li .item-desc { display: block; font-size: 0.7rem; color: var(--ink-faint); margin-top: 4px; }
 
 /* 스토리 영역 */
 .story-pane { flex: 1; overflow-y: auto; padding: 36px clamp(20px, 6vw, 80px); display: flex; flex-direction: column; }
@@ -249,6 +258,41 @@ body { position: relative; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ===== 액션 이펙트 ===== */
+#fx-flash {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0;
+}
+#fx-flash.show-hit { animation: fxHit 0.35s ease; }
+#fx-flash.show-heal { animation: fxHeal 0.5s ease; }
+#fx-flash.show-enemy { animation: fxEnemy 0.3s ease; }
+@keyframes fxHit { 0% { opacity: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(140,30,20,0.55)); } 40% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fxHeal { 0% { opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(111,143,79,0.4)); } 40% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes fxEnemy { 0% { opacity: 0; background: radial-gradient(ellipse at center, rgba(224,196,105,0.25), transparent 60%); } 40% { opacity: 1; } 100% { opacity: 0; } }
+
+#fx-layer { position: fixed; inset: 0; z-index: 65; pointer-events: none; }
+.float-dmg {
+  position: fixed; font-family: "Gowun Batang", serif; font-weight: 700; font-size: 1.6rem;
+  text-shadow: 0 2px 6px #000; animation: floatUp 1s ease-out forwards; white-space: nowrap;
+}
+.float-dmg.enemy { color: var(--amber-soft); }
+.float-dmg.player { color: var(--blood-soft); font-size: 1.9rem; }
+.float-dmg.dodge { color: var(--frost); }
+.float-dmg.guard { color: #b9c2cc; }
+.float-dmg.heal { color: var(--green); }
+@keyframes floatUp { 0% { opacity: 0; transform: translateY(8px) scale(0.8); } 20% { opacity: 1; transform: translateY(0) scale(1.1); } 100% { opacity: 0; transform: translateY(-46px) scale(1); } }
+
+.shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+.cbt-fill.flash-hit { animation: barFlash 0.4s ease; }
+@keyframes barFlash { 0%, 100% { filter: none; } 40% { filter: brightness(2.2); } }
+
+.item-qty { color: var(--amber); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+
 /* ===== 전투 / 지휘 미니 시스템 ===== */
 .cbt-panel, .cmd-panel {
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px;
@@ -290,10 +334,9 @@ body { position: relative; }
 /* 반응형 */
 @media (max-width: 780px) {
   .game-body { flex-direction: column; }
-  .sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--line); }
+  .sidebar { width: 100%; max-height: 38vh; border-right: none; border-bottom: 1px solid var(--line); }
   .stats { flex-direction: row; flex-wrap: wrap; }
   .stat { flex: 1; min-width: 110px; }
-  .inventory { display: none; }
   .story-pane { padding: 22px 18px; }
   .codex-tabs { width: 120px; }
 }

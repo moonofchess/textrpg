@@ -24,6 +24,7 @@
       scene: "intro",
       flags: {},
       inventory: [],
+      supplies: {},
       phase: "1부 1페이즈",
       location: "진흙골",
       status: "진흙골의 아이",
@@ -52,6 +53,15 @@
     setFlag(name, val) { state.flags[name] = val === undefined ? true : val; },
     addCoins(n) { state.coins = Math.max(0, state.coins + n); },
     addRation(n) { state.ration = Math.max(0, state.ration + n); },
+    spend(n) { if (state.coins >= n) { state.coins -= n; return true; } return false; },
+    addSupply(id, n) {
+      n = n || 1;
+      if (!state.supplies) state.supplies = {};
+      state.supplies[id] = (state.supplies[id] || 0) + n;
+      const s = STORY.supplies && STORY.supplies[id];
+      if (s) G.toast("획득: " + s.name + (n > 1 ? " ×" + n : ""));
+    },
+    supplyCount(id) { return (state.supplies && state.supplies[id]) || 0; },
     nextDay() { state.day += 1; },
     setStatus(t) { state.status = t; },
     setLocation(l) { state.location = l; },
@@ -180,9 +190,43 @@
       state.inventory.forEach((id) => {
         const it = STORY.items[id] || { name: id, desc: "" };
         const li = document.createElement("li");
-        li.innerHTML = it.name + (it.desc ? '<span class="item-desc">' + it.desc + "</span>" : "");
+        if (it.consumable) li.classList.add("consumable");
+        let html = '<div class="item-row"><span class="item-name">' + it.name + "</span>";
+        if (it.consumable) html += '<button class="item-use">사용</button>';
+        html += "</div>";
+        if (it.desc) html += '<span class="item-desc">' + it.desc + "</span>";
+        li.innerHTML = html;
+        if (it.consumable) {
+          const btn = li.querySelector(".item-use");
+          if (btn) btn.addEventListener("click", () => useItem(id));
+        }
         inv.appendChild(li);
       });
+    }
+
+    // 물자 (수량형 소모품)
+    const sup = el("supplies-list");
+    if (sup) {
+      sup.innerHTML = "";
+      const entries = Object.keys(state.supplies || {}).filter((id) => state.supplies[id] > 0);
+      if (entries.length === 0) {
+        sup.innerHTML = '<li class="empty">없음</li>';
+      } else {
+        entries.forEach((id) => {
+          const s = (STORY.supplies && STORY.supplies[id]) || { name: id, desc: "" };
+          const n = state.supplies[id];
+          const li = document.createElement("li");
+          li.classList.add("consumable");
+          let html = '<div class="item-row"><span class="item-name">' + s.name +
+            ' <span class="item-qty">×' + n + "</span></span>";
+          html += '<button class="item-use">사용</button></div>';
+          if (s.desc) html += '<span class="item-desc">' + s.desc + "</span>";
+          li.innerHTML = html;
+          const btn = li.querySelector(".item-use");
+          if (btn) btn.addEventListener("click", () => useSupply(id));
+          sup.appendChild(li);
+        });
+      }
     }
   }
 
@@ -323,6 +367,26 @@
   }
 
   window.REFRESH_SIDEBAR = renderSidebar;
+
+  function useItem(id) {
+    const it = STORY.items[id];
+    if (!it || !it.consumable || !state.inventory.includes(id)) return;
+    if (it.use) it.use(G);
+    state.inventory = state.inventory.filter((x) => x !== id);
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+    renderSidebar();
+  }
+
+  function useSupply(id) {
+    const s = STORY.supplies && STORY.supplies[id];
+    if (!s || !state.supplies || (state.supplies[id] || 0) <= 0) return;
+    if (s.use) s.use(G);
+    state.supplies[id] -= 1;
+    if (state.supplies[id] <= 0) delete state.supplies[id];
+    if (window.FX) window.FX.flash("heal");
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+    renderSidebar();
+  }
 
   function go(sceneId) {
     state.scene = sceneId;
