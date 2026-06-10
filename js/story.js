@@ -70,6 +70,12 @@ const STORY = {
           effect: (G) => { G.setFlag("sought_mara"); },
           next: "mara",
         },
+        {
+          text: "더 어린 아이에게 자리를 양보하고, 바닥에 흘린 죽을 긁어 먹는다.",
+          effect: (G) => { G.mod("hunger", 5); G.mod("health", -3); G.mod("reputation", 4); G.setFlag("kind_streak"); },
+          outcome: { type: "neutral", text: "당신은 비쩍 마른 아이를 솥 앞으로 밀어주고, 진흙 바닥에 튄 죽을 손가락으로 긁어 핥는다. 배는 거의 안 찼다. 하지만 그 아이가 당신을 올려다보는 눈빛은 — 진흙골에서 좀처럼 보기 힘든 것이었다. 청연도 한때, 누군가의 그 눈빛으로 살아남았다." },
+          next: "after_porridge",
+        },
       ],
     },
 
@@ -83,7 +89,33 @@ const STORY = {
       ],
       onEnter: (G) => { G.mod("hunger", 12); G.give("charm"); G.setFlag("mara_known"); },
       choices: [
+        { text: "진흙골을 한 바퀴 돌며 리사를 찾아본다.", show: (G) => !G.flag("lisa_known"), next: "lisa" },
         { text: "매듭을 꼭 쥔다. 일거리를 찾아 마을로 간다.", continue: true, next: "to_village" },
+      ],
+    },
+
+    lisa: {
+      title: "독한 계집애",
+      onEnter: (G) => { G.setFlag("lisa_known"); },
+      text: [
+        { t: "narr", c: "도랑 끝 무너진 수레 그늘. 또래보다 한두 살 많아 보이는 소녀가 마른 약초를 다듬고 있다. 리사. 진흙골에서 가장 독하고, 가장 정확한 눈을 가진 아이." },
+        { t: "speak", c: "리사: “마라 할멈한테 빌붙어 온 놈이네. …뭘 봐. 나눠줄 거 없어.”" },
+        { t: "narr", c: "그녀의 손은 약초를 다듬으면서도, 마을 쪽 길과 도랑 양옆을 끊임없이 살핀다. 굶주린 자의 경계심. 청연은 그 눈빛을 안다." },
+        { t: "think", c: "이 아이는 정보가 된다. 진흙골 같은 곳에선, 누가 뭘 아는지가 곧 누가 사는지다." },
+      ],
+      choices: [
+        {
+          text: "마을 사정과 위험한 자들에 대해 묻는다.",
+          effect: (G) => { G.setFlag("lisa_info"); G.mod("awareness", 4); },
+          outcome: { type: "good", text: "리사는 경계하면서도 입을 연다. “요새 마을에 낯선 얼굴이 늘었어. 곡물창고 근처를 자꾸 어슬렁대는 놈들. …조심해. 사람 사고파는 것들일지도 몰라.” 당신은 마을에 발을 들이기도 전에, 위험의 윤곽을 먼저 잡았다." },
+          next: "to_village",
+        },
+        {
+          text: "“언젠가 같이 여기서 나가자.” 약초 다듬는 걸 돕는다.",
+          effect: (G) => { G.setFlag("lisa_ally"); G.mod("reputation", 3); G.mod("hunger", -2); },
+          outcome: { type: "neutral", text: "리사는 코웃음 친다. “나간다고? 나가서 뭐 하게.” 그래도 당신이 묵묵히 약초 줄기를 골라내자, 그녀는 더 쫓아내지 않았다. “…네가 병사가 되든 귀족이 되든, 배고픈 놈 눈빛은 못 속여. 그건 기억해 둬.” 진흙골에 한 사람, 등을 맡길 자가 생겼다." },
+          next: "to_village",
+        },
       ],
     },
 
@@ -95,6 +127,7 @@ const STORY = {
         { t: "narr", c: "당신은 닳은 짚신을 고쳐 신고 도랑을 건넌다." },
       ],
       choices: [
+        { text: "마을로 가기 전, 진흙골을 돌며 리사를 찾는다.", show: (G) => !G.flag("lisa_known"), next: "lisa" },
         { text: "회색보리 마을로 향한다.", continue: true, next: "to_village" },
       ],
     },
@@ -121,6 +154,12 @@ const STORY = {
           tag: "위험", tagType: "risk",
           effect: (G) => { G.mod("health", -8); G.mod("reputation", 2); G.setFlag("molt_grudge"); },
           outcome: { type: "bad", text: "창대가 어깨를 후려친다. 진흙에 처박혔지만, 멀리서 신참 요나가 그 광경을 흥미롭게 지켜본다. 맞은 값으로 배짱만은 알려졌다." },
+          next: "meet_bram",
+        },
+        {
+          text: "몰트를 무시하고, 그 뒤에 선 또래 신참에게 슬쩍 말을 붙인다.",
+          effect: (G) => { G.setFlag("yona_early"); G.mod("awareness", 2); G.mod("reputation", 1); },
+          outcome: { type: "neutral", text: "당신은 몰트를 못 들은 척 지나쳐, 어색하게 서 있던 또래에게 다가간다. “…너도 신참이지?” 그가 떨떠름하게 답한다. “요나다. 진흙골 놈이 말을 다 거네. 세상 진짜 망했어.” 비웃는 말투지만, 적의는 없다. 가장 오래갈 전우와의 첫 마디였다." },
           next: "meet_bram",
         },
       ],
@@ -156,7 +195,7 @@ const STORY = {
         {
           text: "걸음을 멈추고, 주변을 천천히 읽는다.",
           tag: "눈치 판정", tagType: "info",
-          check: { stat: "awareness", bonus: 10 },
+          check: { stat: "awareness", bonus: (G) => 10 + (G.flag("lisa_info") ? 15 : 0) },
           onSuccess: {
             effect: (G) => { G.setFlag("evidence"); G.mod("awareness", 4); },
             outcome: { type: "good", text: "창고 뒤 진창에 낯선 발자국 여럿. 마을 사람의 닳은 짚신이 아니라, 잘 만든 가죽 군화 자국이다. 창고 자물쇠 옆엔 긁힌 흔적. 누군가 안을 들여다봤다. 그것도 한 명이 아니다." },
@@ -494,7 +533,38 @@ const STORY = {
         { t: "speak", c: "가렌: “검술은 기사님들 놀이야. 너 같은 놈은 창을 잡아. 멀리서 찔러야 오래 산다.”" },
       ],
       choices: [
-        { text: "창을 받아 쥔다.", effect: (G) => { G.give("spear"); G.setFlag("yona_ally"); }, continue: true, next: "p2_castle" },
+        { text: "창을 받아 쥔다.", effect: (G) => { G.give("spear"); G.setFlag("yona_ally"); }, continue: true, next: "p2_training" },
+      ],
+    },
+
+    p2_training: {
+      title: "창을 잡는 법",
+      onEnter: (G) => { G.nextDay(); G.mod("hunger", -5); },
+      text: [
+        { t: "narr", c: "성채 마당. 노병 가렌이 병사들을 줄 세운다. 갑옷 입은 자, 맨몸인 자, 신발도 짝짝이인 자. 변경 군대의 민낯이다." },
+        { t: "speak", c: "가렌: “기사처럼 싸울 생각 마라. 너흰 기사가 아니야. 창은 멀리서, 두 발은 항상 도망갈 곳을 향해. 그게 너희가 내일도 밥 먹는 법이다.”" },
+        { t: "narr", c: "훈련은 고되다. 창을 내지르고, 방패를 세우고, 진창에서 행군한다. 영양실조로 근골이 약한 로완에게는 더더욱." },
+      ],
+      choices: [
+        {
+          text: "이를 악물고 남들 두 배로 굴러, 몸에 새긴다.",
+          tag: "비용", tagType: "cost",
+          effect: (G) => { G.mod("health", -6); G.mod("reputation", 3); G.setFlag("drilled_hard"); },
+          outcome: { type: "good", text: "당신은 쓰러질 때까지 창을 내지른다. 가렌이 곁눈질로 본다. “…독한 놈.” 몸은 부서질 듯하지만, 창대를 쥔 손이 비로소 ‘무기’를 기억하기 시작한다. (전투에 도움이 된다)" },
+          next: "p2_castle",
+        },
+        {
+          text: "힘을 아끼고, 가렌과 고참들의 ‘진짜 요령’을 훔쳐본다.",
+          effect: (G) => { G.mod("awareness", 4); G.setFlag("watched_veterans"); },
+          outcome: { type: "good", text: "당신은 적당히 따라 하는 척하며, 오래 산 고참들이 어떻게 힘을 아끼고 어디서 숨을 고르는지를 눈에 담는다. 청연의 방식이다 — 정직한 노력보다, 살아남은 자를 베끼는 것." },
+          next: "p2_castle",
+        },
+        {
+          text: "보급 천막과 마구간을 들락거리며 성채의 ‘배 속’을 익힌다.",
+          effect: (G) => { G.mod("awareness", 3); G.setFlag("kitchen_eyes"); G.mod("hunger", 4); },
+          outcome: { type: "neutral", text: "훈련을 적당히 빠진 대가로 가렌의 눈총을 받았지만, 당신은 성채의 식량·말·보급이 어떻게 도는지를 손바닥처럼 익혔다. 그리고 부엌에서 식은 빵 한 조각도 얻었다. 전쟁은 결국 배 속에서 진다." },
+          next: "p2_castle",
+        },
       ],
     },
 
@@ -510,14 +580,54 @@ const STORY = {
         {
           text: "글자와 명령 체계를 배운다.",
           effect: (G) => { G.mod("awareness", 4); G.mod("reputation", 2); G.setFlag("literate"); },
-          outcome: { type: "good", text: "밤마다 세리아에게 글자를 배운다. 청연의 머리는 빠르다. 명령서, 보급 장부, 전령의 표식 — 글을 읽자 전장이 다르게 보이기 시작한다." },
-          next: "p2_castle2",
+          outcome: { type: "good",           text: "밤마다 세리아에게 글자를 배운다. 청연의 머리는 빠르다. 명령서, 보급 장부, 전령의 표식 — 글을 읽자 전장이 다르게 보이기 시작한다." },
+          next: "p2_rival",
         },
         {
           text: "글자보다 사람을 읽는다. 하인과 마부에게 붙는다.",
           effect: (G) => { G.mod("awareness", 5); G.setFlag("kitchen_eyes"); },
-          outcome: { type: "good", text: "마구간, 부엌, 빨래터. 낮은 사람들의 입에서 성채의 진짜 사정이 흘러나온다 — 누가 급료를 떼이고, 어느 보급이 비고, 어떤 기사가 겁쟁이인지. 청연의 개방식 눈치가 자산이 된다." },
+          outcome: { type: "good",           text: "마구간, 부엌, 빨래터. 낮은 사람들의 입에서 성채의 진짜 사정이 흘러나온다 — 누가 급료를 떼이고, 어느 보급이 비고, 어떤 기사가 겁쟁이인지. 청연의 개방식 눈치가 자산이 된다." },
+          next: "p2_rival",
+        },
+      ],
+    },
+
+    p2_rival: {
+      title: "기사의 종자",
+      onEnter: (G) => { G.mod("hunger", -4); },
+      text: [
+        { t: "narr", c: "우물가. 기사의 종자인 젊은 귀족 자제가 물통을 든 로완의 앞을 막는다. 광나는 가죽조끼, 혈통에 대한 자부심으로 빳빳한 목." },
+        { t: "speak", c: "종자: “남작님이 진흙 거지까지 병사라 부르다니. 네깟 게 창을 잡으면, 그 창이 부끄러워하지 않겠어?”" },
+        { t: "narr", c: "주변 병사들이 흘끔거린다. 여기서의 처신이 성채에서의 위치를 정한다." },
+      ],
+      choices: [
+        {
+          text: "고개 숙여 물통을 건넨다. 체면은 나중에 챙긴다.",
+          effect: (G) => { G.mod("reputation", -1); G.mod("awareness", 2); },
+          outcome: { type: "neutral", text: "당신은 순순히 물통을 바친다. 종자는 만족스럽게 떠난다. 비굴함의 대가로 평판은 깎였지만 — 그가 방심하는 동안, 당신은 그가 칼 잡는 법도 모르는 허세뿐인 애송이임을 간파했다." },
           next: "p2_castle2",
+        },
+        {
+          text: "“창은 부끄러워 않습니다. 굶어본 손이 더 꽉 쥐니까.” 받아친다.",
+          tag: "위험", tagType: "risk",
+          effect: (G) => { G.mod("reputation", 3); G.setFlag("squire_grudge"); },
+          outcome: { type: "bad", text: "종자의 얼굴이 붉어진다. “건방진!” 그가 손을 들지만, 마침 가렌이 헛기침하며 지나가 상황이 끝난다. 종자는 앙심을 품었다. 하지만 지켜보던 병졸들은, 진흙골 놈의 배짱을 마음에 새겼다." },
+          next: "p2_castle2",
+        },
+        {
+          text: "약점을 읽어, 모두가 듣는 데서 그의 허세를 들춘다.",
+          tag: "눈치 판정", tagType: "info",
+          check: { stat: "awareness", bonus: 10 },
+          onSuccess: {
+            effect: (G) => { G.mod("reputation", 6); G.setFlag("squire_humbled"); },
+            outcome: { type: "good", text: "“어제 야간 보초 때 늑대 울음에 사다리에서 굴러떨어지신 분이, 누구 창을 걱정합니까?” 정확한 한 방. 종자는 얼굴이 새빨개져 도망치고, 우물가에 웃음이 터진다. 천한 출신이 머리로 귀족을 이긴 첫 순간이다." },
+            next: "p2_castle2",
+          },
+          onFail: {
+            effect: (G) => { G.mod("health", -6); G.setFlag("squire_grudge"); },
+            outcome: { type: "bad", text: "넘겨짚은 말이 빗나간다. 종자가 발끈해 당신을 밀쳐 진창에 처박는다. 망신만 샀다. 입은 때론 칼보다 위험하다." },
+            next: "p2_castle2",
+          },
         },
       ],
     },
@@ -566,7 +676,7 @@ const STORY = {
           ],
         },
         baseDmg: 5,
-        bonus: (G) => (G.flag("wolf_ready") ? 18 : 6),
+        bonus: (G) => (G.flag("wolf_ready") ? 18 : 6) + (G.flag("drilled_hard") ? 6 : 0),
         allowFlee: true,
         onWin: {
           effect: (G) => { G.setFlag("wolves_won"); G.mod("reputation", 6); G.mod("awareness", 3); G.mod("health", 4); },
@@ -665,33 +775,163 @@ const STORY = {
         { t: "think", c: "다음은 자작의 군영이다. 더 큰 군대, 더 많은 깃발. 그리고 그곳에서 나는 처음으로… 남을 지휘하게 된다." },
       ],
       choices: [
-        { text: "자작의 군영으로 향한다. (3페이즈 →)", continue: true, next: "p3_intro" },
+        { text: "남작령에 닥친 다음 겨울을 맞는다. (3페이즈 →)", continue: true, next: "p3_bridge" },
         { text: "타이틀로 돌아간다.", action: "title" },
       ],
     },
 
     /* =====================================================
-       1부 3페이즈 「열 명의 목숨」 — 석피 멧돼지 + 분대 지휘
+       1부 3페이즈 「열 명의 목숨」 — 자작령 차출 → 석피 멧돼지 → 분대 지휘
        ===================================================== */
-    p3_intro: {
-      title: "열 명의 목숨",
+    p3_bridge: {
+      title: "윗선의 부름",
       phase: "1부 3페이즈",
+      location: "하윈 성채",
+      status: "정규 무장병",
+      onEnter: (G) => { G.nextDay(); G.mod("hunger", -5); },
+      text: (G) => {
+        const arr = [
+          { t: "sys", c: "【 1부 3페이즈 「열 명의 목숨」 】" },
+          { t: "narr", c: "겨울이 더 깊어졌다. 그리고 변경의 봉건 질서가 삐걱이며 움직이기 시작한다 — 칼덴 자작이 휘하 봉신들에게 병력 공출을 명한 것이다. 북부 요새선이 또 한 자락 밀렸고, 피난민과 마물이 동시에 남하하고 있다는 소문이 돌았다." },
+          { t: "narr", c: "하윈 남작은 가난한 봉신이다. 상위 봉신인 자작의 명을 거스를 수 없다. 그가 내놓을 수 있는 건 몇 안 되는 병사들. 그리고 호송 사건 보고서에는, 한 이름이 붉게 적혀 있었다." },
+          { t: "speak", c: "하윈: “자작이 ‘쓸 만한 놈을 보내라’ 했다. 나는 너를 적었다, 로완. 영광인 줄 알아라 — 그리고 동시에, 이건 너를 버리는 패이기도 하다.”" },
+          { t: "think", c: "버리는 패. 가난한 영주가 아까운 기사 대신, 천한 출신을 윗선에 바친다. 죽어도 손해가 적은 말(馬)을. …알고 있다. 무적자였을 때부터, 나는 늘 그런 말이었다." },
+        ];
+        if (G.flag("saved_supply")) {
+          arr.push({ t: "speak", c: "세리아: “…아버지는 당신을 아까워하면서도 내놓네요. 살아 돌아와요. 글자를 가르친 값은 받아야겠으니까.”" });
+        }
+        return arr;
+      },
+      choices: [
+        {
+          text: "“가겠습니다.” 짐을 꾸린다. 요나도 함께 차출되었다.",
+          effect: (G) => { G.setFlag("yona_ally"); },
+          continue: true,
+          next: "p3_arrival",
+        },
+        {
+          text: "가렌 노병에게 마지막으로 조언을 청한다.",
+          show: (G) => !G.flag("p3_garen_advice"),
+          effect: (G) => { G.setFlag("p3_garen_advice"); G.mod("awareness", 3); },
+          outcome: { type: "good", text: "가렌이 술 냄새를 풍기며 어깨를 짚는다. “자작 군영엔 혈통 자랑하는 애송이 장교가 깔렸다. 그놈들 앞에서 똑똑한 척 마라. 멍청한 척하면서, 살 자리만 봐 둬. 그게 오래 사는 법이다.” 군영의 생리를 미리 읽었다." },
+          next: "p3_arrival",
+        },
+      ],
+    },
+
+    p3_arrival: {
+      title: "칼덴 군영",
       location: "칼덴 군영",
       status: "자작 근위대 대원",
+      onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); G.setStatus("자작 근위대 대원"); },
+      text: [
+        { t: "narr", c: "칼덴 자작의 군영은 하윈 성채와 격이 다르다. 늘어선 막사, 펄럭이는 깃발, 명령 체계와 전령, 수백의 병사. 진흙골 출신에게 이곳은 또 다른 세계다 — 더 크고, 더 차갑다." },
+        { t: "narr", c: "신참 점호. 귀족 출신 장교 다리온 베크가 새로 온 병졸들을 훑는다. 광이 나는 갑옷, 곧은 자세. 그의 시선이 로완의 닳은 장화에서 멈춘다." },
+        { t: "speak", c: "다리온: “남작이 보낸 게 이런 것들인가. 진흙 냄새 나는 잡병. …전장은 도살장이 아니라 명예의 자리다. 너 같은 놈은 그걸 더럽히지.”" },
+      ],
+      choices: [
+        {
+          text: "고개를 숙이고 멍청한 척, 살 자리만 눈에 담는다. (가렌의 조언)",
+          show: (G) => G.flag("p3_garen_advice"),
+          effect: (G) => { G.mod("awareness", 3); G.setFlag("darion_underestimates"); },
+          outcome: { type: "good", text: "당신은 비굴할 만큼 굽신거린다. 다리온은 흥미를 잃고 지나간다. 그가 당신을 ‘하찮은 것’으로 분류하는 동안, 당신은 군영의 막사 배치·보초 교대·식량 천막 위치를 전부 머리에 새겼다. 과소평가는 거지의 갑옷이다." },
+          next: "p3_camp",
+        },
+        {
+          text: "맞받아친다. “도살장에 예쁜 이름을 붙인 게 명예 아닙니까.”",
+          tag: "위험", tagType: "risk",
+          effect: (G) => { G.mod("health", -8); G.mod("reputation", 3); G.setFlag("darion_grudge"); },
+          outcome: { type: "bad", text: "다리온의 장갑이 뺨을 후린다. “건방진 혀로군.” 그는 당신을 똑똑히 기억한다 — 적으로. 하지만 지켜보던 병사들 몇은, 처음으로 진흙골 놈에게 흥미를 가졌다." },
+          next: "p3_camp",
+        },
+        {
+          text: "침묵한 채, 그저 시선을 받아낸다.",
+          effect: (G) => { G.mod("awareness", 1); },
+          outcome: { type: "neutral", text: "당신은 아무 말도 하지 않는다. 다리온은 코웃음 치며 지나간다. 시간은 당신 편이다 — 말은 적이 되지만, 침묵은 누구도 되지 않는다." },
+          next: "p3_camp",
+        },
+      ],
+    },
+
+    p3_camp: {
+      title: "군영의 사람들",
+      onEnter: (G) => { G.mod("hunger", -4); },
+      text: [
+        { t: "narr", c: "막사 한구석, 거구의 사내가 묵묵히 방패를 손질한다. 북부에서 내려온 피난민 병사 헬가. 마물에게 가족을 잃은 눈을 하고 있다. 그 옆엔 말 적은 사냥꾼 출신 척후병 카스." },
+        { t: "narr", c: "그리고 멀리, 자작가의 천막 그늘에서 한 여인이 신참들을 관찰한다. 자작의 조카 이자벨 칼덴. 귀족 사회의 위선을 누구보다 잘 아는 눈빛이다." },
+        { t: "think", c: "기사도, 귀족도 아니다. 내가 살아남으려면 — 같이 살아남을 사람을 알아둬야 한다. 청연은 늘 그렇게 살았다. 거지의 힘은 패거리다." },
+      ],
+      choices: [
+        {
+          text: "헬가에게 다가가 말없이 방패 손질을 돕는다.",
+          effect: (G) => { G.setFlag("helga_bond"); G.mod("reputation", 3); },
+          outcome: { type: "good", text: "당신은 묻지 않고, 옆에 앉아 가죽끈을 함께 손본다. 한참 뒤 헬가가 입을 연다. “도망치라면 도망치고, 버티라면 버틴다. 대신 이유는 제대로 말해라.” 첫 신뢰가 생겼다." },
+          next: "p3_camp_hub",
+        },
+        {
+          text: "카스를 따라 척후에 나서, 주변 지형을 익힌다.",
+          effect: (G) => { G.setFlag("scout_terrain"); G.mod("awareness", 4); },
+          outcome: { type: "good", text: "카스는 말이 없지만, 발자국과 바람을 읽는 법을 손짓으로 보여준다. “사람 발자국은 거짓말을 한다. 짐승 발자국은 덜 한다.” 군영 주변의 골짜기·바위·퇴로를 머리에 새긴다. 훗날 이 지형이 목숨을 살린다." },
+          next: "p3_camp_hub",
+        },
+        {
+          text: "이자벨에게 다가가, 군영의 ‘진짜’ 사정을 묻는다.",
+          tag: "눈치 판정", tagType: "info",
+          check: { stat: "awareness", bonus: 15 },
+          onSuccess: {
+            effect: (G) => { G.setFlag("isabel_contact"); G.mod("awareness", 3); G.mod("reputation", 2); },
+            outcome: { type: "good", text: "이자벨은 천한 병졸의 당돌함에 한쪽 눈썹을 올린다. “영리하네. 보급이 두 달째 늦고, 자작은 내전의 전조를 읽고 있어. 곧 이 변경이 시험대에 오를 거야.” 귀족 정치의 한 자락을 엿봤다." },
+            next: "p3_camp_hub",
+          },
+          onFail: {
+            effect: (G) => { G.mod("reputation", -1); },
+            outcome: { type: "neutral", text: "이자벨은 당신을 위아래로 훑더니 등을 돌린다. “냄새나는 입으로 물을 건 아니지.” 무안했지만, 그녀가 무언가를 ‘읽고 있다’는 것만은 알아챘다." },
+            next: "p3_camp_hub",
+          },
+        },
+      ],
+    },
+
+    p3_camp_hub: {
+      title: "출진 전야",
+      text: (G) => {
+        const arr = [
+          { t: "narr", c: "막사에 모닥불이 사위어 간다. 내일이면 첫 임무다. 자작이 직접 신참 점검에 나선다는 소문이 돈다." },
+        ];
+        const bonds = [G.flag("helga_bond"), G.flag("scout_terrain"), G.flag("isabel_contact")].filter(Boolean).length;
+        if (bonds >= 2) arr.push({ t: "think", c: "하루 만에 두 사람 이상을 ‘내 편’으로 만들었다. 군영이 조금 덜 차갑게 느껴진다." });
+        return arr;
+      },
+      choices: [
+        {
+          text: "남은 시간, 한 사람을 더 챙긴다.",
+          show: (G) => !(G.flag("helga_bond") && G.flag("scout_terrain") && G.flag("isabel_contact")),
+          next: "p3_camp",
+        },
+        {
+          text: "창을 손질하고 잠을 청한다. 내일을 맞는다.",
+          effect: (G) => { G.mod("health", 5); },
+          continue: true,
+          next: "p3_intro",
+        },
+      ],
+    },
+
+    p3_intro: {
+      title: "열 명의 목숨",
+      location: "칼덴 군영 · 외곽",
       onEnter: (G) => { G.nextDay(); G.mod("hunger", -6); },
       text: [
-        { t: "sys", c: "【 1부 3페이즈 「열 명의 목숨」 】" },
-        { t: "narr", c: "칼덴 자작의 군영은 하윈 성채와 격이 다르다. 깃발, 장교, 명령 체계, 수백의 병사. 진짜 전쟁의 냄새가 난다." },
-        { t: "narr", c: "자작 알브레히트 칼덴은 50대의 전략가다. 그는 로완을 아끼지 않는다 — 관찰한다." },
+        { t: "narr", c: "이튿날, 자작 알브레히트 칼덴이 신참들을 사열한다. 50대의 전략가. 그는 로완을 아끼지 않는다 — 관찰한다." },
         { t: "speak", c: "칼덴: “천한 놈이 이상하게 오래 살아남는군. 왕국은 점잖은 기사보다, 네놈 같은 더러운 생존자를 필요로 하게 될 것이다.”" },
-        { t: "narr", c: "그때, 군영 외곽에서 비명이 터진다. 척후를 나간 십인조가 무언가에 쫓겨 돌아온다 — 그 뒤로, 땅을 울리며 거대한 그림자가 따라온다." },
+        { t: "narr", c: "그 말이 끝나기도 전에, 군영 외곽에서 비명이 터진다. 척후를 나간 십인조가 무언가에 쫓겨 돌아온다 — 그 뒤로, 땅을 울리며 거대한 그림자가 따라온다." },
         { t: "danger", c: "석피 멧돼지. 돌처럼 굳은 가죽의 3등급 중형 마물. 십장이 창을 들고 막아서지만, 정면으로는 막을 수 없다." },
       ],
       choices: [
         {
           text: "정면에 서지 말라고 외치며, 측면으로 파고들 자리를 잡는다.",
           tag: "눈치 판정", tagType: "info",
-          check: { stat: "awareness", bonus: 25 },
+          check: { stat: "awareness", bonus: (G) => 20 + (G.flag("scout_terrain") ? 10 : 0) },
           onSuccess: {
             effect: (G) => { G.setFlag("boar_ready"); G.mod("awareness", 2); },
             outcome: { type: "good", text: "“정면 비켜! 돌진은 직선이다!” 당신은 바위 사이로 몸을 숨기며, 멧돼지가 선회하는 사각을 미리 읽는다. 청연의 보법이 살아난다. (전투에서 회피 보너스)" },
@@ -723,7 +963,7 @@ const STORY = {
           ],
         },
         baseDmg: 6,
-        bonus: (G) => (G.flag("boar_ready") ? 20 : 8),
+        bonus: (G) => (G.flag("boar_ready") ? 20 : 8) + (G.flag("drilled_hard") ? 6 : 0),
         allowFlee: true,
         onWin: {
           effect: (G) => { G.setFlag("boar_won"); G.mod("reputation", 10); G.mod("awareness", 4); },
@@ -749,9 +989,23 @@ const STORY = {
       ],
       choices: [
         {
-          text: "흩어지는 병사들을 억지로 묶는다. 멋있을 필요 없다. 살리면 된다.",
-          effect: (G) => { G.setStatus("임시 십장"); G.mod("reputation", 3); },
+          text: "거칠게 윽박질러 억지로 묶는다. 멋있을 필요 없다. 살리면 된다.",
+          effect: (G) => { G.setStatus("임시 십장"); G.mod("reputation", 3); G.setFlag("rally_harsh"); },
           outcome: { type: "neutral", text: "“울 시간 있으면 진흙 발라! 창 버리는 놈은 내가 먼저 죽인다! 살고 싶으면 내 목소리만 따라와!” 낭만 없는 호령. 그래서 더 먹힌다. 흩어지던 열 명이, 한 점으로 모인다." },
+          next: "p3_command",
+        },
+        {
+          text: "헬가를 전열 한가운데 세우고, 이유를 또박또박 일러준다.",
+          show: (G) => G.flag("helga_bond"),
+          effect: (G) => { G.setStatus("임시 십장"); G.mod("reputation", 4); G.setFlag("rally_helga"); },
+          outcome: { type: "good", text: "“헬가, 가운데. 너만 안 무너지면 양옆도 안 무너진다. 우린 자작 본대 올 때까지만 버틴다 — 그 한 가지만 한다.” 거구의 헬가가 묵묵히 방패를 세우자, 떨던 병사들이 그 등 뒤로 모여든다. 이유를 아는 부대는, 쉽게 깨지지 않는다." },
+          next: "p3_command",
+        },
+        {
+          text: "카스에게 익혀둔 지형으로 적을 끌어들이라 신호한다.",
+          show: (G) => G.flag("scout_terrain"),
+          effect: (G) => { G.setStatus("임시 십장"); G.mod("reputation", 4); G.setFlag("rally_terrain"); },
+          outcome: { type: "good", text: "당신은 어제 카스와 익힌 골짜기 길을 떠올린다. “저 좁은 길로 흘려보낸다. 머릿수는 거기서 소용없어.” 지형을 등에 업자, 열 명이 백 명을 상대할 자리가 생긴다." },
           next: "p3_command",
         },
       ],
@@ -764,7 +1018,8 @@ const STORY = {
           { t: "think", c: "자작 본대가 정렬해 도착할 때까지. 그때까지만 버티면 된다. 한 명이라도 더 데리고." },
         ],
         squad: 10,
-        morale: 55,
+        morale: (G) => 50 + (G.flag("rally_helga") ? 12 : 0) + (G.flag("helga_bond") ? 4 : 0) + (G.flag("isabel_contact") ? 4 : 0) + (G.flag("drilled_hard") ? 4 : 0),
+        pressure: (G) => 20 - (G.flag("rally_terrain") ? 10 : 0),
         waves: [
           { threat: 3, desc: [{ t: "narr", c: "제1파. 도적 선발대가 함성을 지르며 달려든다. 아직은 떠보는 공격이다." }] },
           { threat: 4, desc: [{ t: "narr", c: "제2파. 측면 풀숲에서 잿빛 늑대 몇 마리가 병사들의 옆구리를 노린다. 전열이 술렁인다." }] },

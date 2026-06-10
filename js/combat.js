@@ -219,11 +219,13 @@
   const Command = {
     start(config) {
       const G = window.G;
+      const squad = typeof config.squad === "function" ? config.squad(G) : config.squad;
+      const morale = typeof config.morale === "function" ? config.morale(G) : config.morale;
       const st = {
-        men: config.squad,
-        maxMen: config.squad,
-        morale: config.morale,
-        pressure: 20,
+        men: squad,
+        maxMen: squad,
+        morale: clamp(morale, 0, 100),
+        pressure: clamp(typeof config.pressure === "function" ? config.pressure(G) : (config.pressure || 20), 0, 100),
         wave: 0,
         casualties: 0,
         routed: false,
