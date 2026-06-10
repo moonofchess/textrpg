@@ -1220,33 +1220,68 @@ const STORY = {
         { t: "think", c: "기사도, 귀족도 아니다. 내가 살아남으려면 — 같이 살아남을 사람을 알아둬야 한다. 청연은 늘 그렇게 살았다. 거지의 힘은 패거리다." },
       ],
       choices: [
+        { text: "헬가에게 다가가 말없이 방패 손질을 돕는다.", show: (G) => !G.flag("helga_bond"), next: "p3_meet_helga" },
+        { text: "카스를 따라 척후에 나서, 주변 지형을 익힌다.", show: (G) => !G.flag("scout_terrain"), next: "p3_meet_kas" },
+        { text: "이자벨에게 다가가, 군영의 ‘진짜’ 사정을 묻는다.", show: (G) => !G.flag("isabel_contact"), next: "p3_meet_isabel" },
+        { text: "그만 둘러보고, 막사로 간다.", continue: true, next: "p3_camp_hub" },
+      ],
+    },
+
+    p3_meet_helga: {
+      title: "헬가",
+      art: "port-helga",
+      onEnter: (G) => { G.setFlag("helga_bond"); G.mod("reputation", 3); },
+      text: [
+        { t: "narr", c: "당신은 아무것도 묻지 않고, 거구의 사내 곁에 털썩 앉아 함께 가죽끈을 손본다. 헬가는 한참을 말없이 방패만 문지른다." },
+        { t: "speak", c: "헬가: “…북부에선, 마물이 마을을 통째로 삼켰다. 처자식까지. 나는 그때 등을 돌리고 달아났지.”" },
+        { t: "narr", c: "굵은 손가락이 방패의 이 빠진 가장자리를 쓸어내린다." },
+        { t: "speak", c: "헬가: “도망치라면 도망친다. 버티라면 버틴다. 대신 이유는 제대로 말해라. 영문도 모르고 죽는 건… 두 번은 못 하겠다.”" },
+        { t: "think", c: "이런 사내가 등을 맡겨준다면, 전열은 쉽게 무너지지 않는다." },
+      ],
+      choices: [
+        { text: "고개를 끄덕인다. 막사로 돌아간다.", continue: true, next: "p3_camp_hub" },
+      ],
+    },
+
+    p3_meet_kas: {
+      title: "카스",
+      art: "port-kas",
+      onEnter: (G) => { G.setFlag("scout_terrain"); G.mod("awareness", 4); },
+      text: [
+        { t: "narr", c: "카스는 말 대신 손짓으로 따라오라 한다. 군영 외곽의 능선을 따라, 그는 짐승처럼 소리 없이 움직인다." },
+        { t: "narr", c: "그가 진창에 찍힌 발자국 몇 개를 가리키더니, 손가락 두 개로 방향을 짚어 보인다. 골짜기, 바위 그늘, 빠져나갈 좁은 길." },
+        { t: "speak", c: "카스: “사람 발자국은 거짓말을 한다. 짐승 발자국은… 덜 한다.”" },
+        { t: "think", c: "군영 둘레의 지형이 머릿속에 그려진다. 이 길들이, 언젠가 누군가의 목숨을 살릴 것이다." },
+      ],
+      choices: [
+        { text: "지형을 머리에 새기고, 막사로 돌아간다.", continue: true, next: "p3_camp_hub" },
+      ],
+    },
+
+    p3_meet_isabel: {
+      title: "이자벨 칼덴",
+      art: "port-isabel",
+      text: [
+        { t: "narr", c: "자작가 천막 그늘. 이자벨 칼덴이 신참들을 관찰하다, 다가오는 당신을 흥미롭다는 듯 바라본다." },
+        { t: "speak", c: "이자벨: “천한 병졸이 귀족 천막 앞을 어슬렁대다니. …무슨 볼일이지?”" },
+      ],
+      choices: [
         {
-          text: "헬가에게 다가가 말없이 방패 손질을 돕는다.",
-          effect: (G) => { G.setFlag("helga_bond"); G.mod("reputation", 3); },
-          outcome: { type: "good", text: "당신은 묻지 않고, 옆에 앉아 가죽끈을 함께 손본다. 한참 뒤 헬가가 입을 연다. “도망치라면 도망치고, 버티라면 버틴다. 대신 이유는 제대로 말해라.” 첫 신뢰가 생겼다." },
-          next: "p3_camp_hub",
-        },
-        {
-          text: "카스를 따라 척후에 나서, 주변 지형을 익힌다.",
-          effect: (G) => { G.setFlag("scout_terrain"); G.mod("awareness", 4); },
-          outcome: { type: "good", text: "카스는 말이 없지만, 발자국과 바람을 읽는 법을 손짓으로 보여준다. “사람 발자국은 거짓말을 한다. 짐승 발자국은 덜 한다.” 군영 주변의 골짜기·바위·퇴로를 머리에 새긴다. 훗날 이 지형이 목숨을 살린다." },
-          next: "p3_camp_hub",
-        },
-        {
-          text: "이자벨에게 다가가, 군영의 ‘진짜’ 사정을 묻는다.",
+          text: "군영의 ‘진짜’ 사정을 넌지시 캐묻는다.",
           tag: "눈치 판정", tagType: "info",
           check: { stat: "awareness", bonus: 15 },
           onSuccess: {
             effect: (G) => { G.setFlag("isabel_contact"); G.mod("awareness", 3); G.mod("reputation", 2); },
-            outcome: { type: "good", text: "이자벨은 천한 병졸의 당돌함에 한쪽 눈썹을 올린다. “영리하네. 보급이 두 달째 늦고, 자작은 내전의 전조를 읽고 있어. 곧 이 변경이 시험대에 오를 거야.” 귀족 정치의 한 자락을 엿봤다." },
+            outcome: { type: "good", text: "이자벨이 한쪽 눈썹을 올린다. “영리하네. 보급이 두 달째 늦고, 자작은 내전의 전조를 읽고 있어. 곧 이 변경이 시험대에 오를 거야.” 귀족 정치의 한 자락을 엿봤다." },
             next: "p3_camp_hub",
           },
           onFail: {
             effect: (G) => { G.mod("reputation", -1); },
-            outcome: { type: "neutral", text: "이자벨은 당신을 위아래로 훑더니 등을 돌린다. “냄새나는 입으로 물을 건 아니지.” 무안했지만, 그녀가 무언가를 ‘읽고 있다’는 것만은 알아챘다." },
+            outcome: { type: "neutral", text: "이자벨이 위아래로 훑더니 등을 돌린다. “냄새나는 입으로 물을 건 아니지.” 무안했지만, 그녀가 무언가를 ‘읽고 있다’는 것만은 알아챘다." },
             next: "p3_camp_hub",
           },
         },
+        { text: "괜한 짓이었다. 물러난다.", next: "p3_camp_hub" },
       ],
     },
 
@@ -1408,29 +1443,30 @@ const STORY = {
 
     p3_command: {
       bg: "bg-battlefield-night",
-      command: {
-        intro: [
-          { t: "danger", c: "도적과 마물이 동시에 측면을 두드린다. 당신의 등에, 처음으로 열 명의 목숨이 매달렸다." },
-          { t: "think", c: "자작 본대가 정렬해 도착할 때까지. 그때까지만 버티면 된다. 한 명이라도 더 데리고." },
-        ],
-        squad: 10,
-        morale: (G) => 50 + (G.flag("rally_helga") ? 12 : 0) + (G.flag("helga_bond") ? 4 : 0) + (G.flag("isabel_contact") ? 4 : 0) + (G.flag("drilled_hard") ? 4 : 0),
-        pressure: (G) => 20 - (G.flag("rally_terrain") ? 10 : 0),
-        waves: [
-          { threat: 3, desc: [{ t: "narr", c: "제1파. 도적 선발대가 함성을 지르며 달려든다. 아직은 떠보는 공격이다." }] },
-          { threat: 4, desc: [{ t: "narr", c: "제2파. 측면 풀숲에서 잿빛 늑대 몇 마리가 병사들의 옆구리를 노린다. 전열이 술렁인다." }] },
-          { threat: 4, desc: [{ t: "narr", c: "제3파. 도적 본대가 밀고 들어온다. 머릿수에 겁먹은 병사들의 사기가 시험대에 오른다." }] },
-          { threat: 5, desc: [{ t: "danger", c: "제4파. 비늘몸 한 마리가 난입해 난전이 벌어진다. 비명과 피. 여기서 무너지면 끝이다." }] },
-          { threat: 6, desc: [{ t: "danger", c: "최후의 파도. 멀리 자작의 뿔나팔이 울린다 — 증원이 온다! 그때까지, 이 한 번만 더 버텨라!" }] },
+      onEnter: (G) => { if (!G.s.squad || !G.s.squad.length) G.initSquad(10); },
+      skirmish: {
+        useIndex: false,
+        battles: [
+          {
+            morale: (G) => 55 + (G.flag("rally_helga") ? 12 : 0) + (G.flag("helga_bond") ? 4 : 0) + (G.flag("isabel_contact") ? 4 : 0) + (G.flag("drilled_hard") ? 4 : 0),
+            pressure: (G) => 20 - (G.flag("rally_terrain") ? 10 : 0),
+            intro: [
+              { t: "danger", c: "도적과 마물이 동시에 측면을 두드린다. 당신의 등에, 처음으로 열 명의 목숨이 매달렸다." },
+              { t: "think", c: "자작 본대가 도착할 때까지. 그때까지만 버티면 된다. 한 명이라도 더 데리고." },
+            ],
+            waves: [
+              { threat: 3, desc: [{ t: "narr", c: "제1파. 도적 선발대가 함성을 지르며 달려든다. 아직은 떠보는 공격이다." }] },
+              { threat: 4, desc: [{ t: "narr", c: "제2파. 측면 풀숲에서 잿빛 늑대가 전열의 옆구리를 노린다." }] },
+              { threat: 4, desc: [{ t: "narr", c: "제3파. 도적 본대가 밀고 들어온다. 머릿수에 겁먹은 전열의 사기가 시험대에 오른다." }] },
+              { threat: 5, desc: [{ t: "danger", c: "제4파. 비늘몸 한 마리가 난입해 난전이 벌어진다. 비명과 피." }] },
+              { threat: 6, desc: [{ t: "danger", c: "최후의 파도. 멀리 자작의 뿔나팔이 울린다 — 증원이 온다! 이 한 번만 더 버텨라!" }] },
+            ],
+          },
         ],
         onComplete: (G, r) => {
-          G.s.cmdResult = r;
-          if (r.result === "held") {
-            G.mod("reputation", r.survivors >= 7 ? 16 : 10);
-            G.mod("awareness", 3);
-          } else {
-            G.mod("reputation", 4);
-          }
+          G.s.cmdResult = { survivors: r.survivors, maxSquad: 10, casualties: Math.max(0, 10 - r.survivors), result: r.result };
+          if (r.result === "held") { G.mod("reputation", r.survivors >= 7 ? 16 : 10); G.mod("awareness", 3); }
+          else { G.mod("reputation", 4); }
           return "p3_command_after";
         },
       },
@@ -1571,6 +1607,7 @@ const STORY = {
     skirmish: {
       bg: "bg-battlefield-night",
       skirmish: {
+        useIndex: true,
         battles: [
           {
             pressure: 12,
