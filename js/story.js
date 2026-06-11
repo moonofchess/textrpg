@@ -1899,6 +1899,8 @@ const STORY = {
 
     endless_defeat: {
       title: "마지막 진",
+      submit: (G) => ({ result: "무한 전투 " + (G.s.endlessBest || 0) + "진 도달", status: "무한 전투", survivors: null }),
+      submitRepeat: true,
       onEnter: (G) => { G.mod("health", 8); },
       text: (G) => [
         { t: "danger", c: "마침내 분대가 무너졌다. 마지막 한 명이 쓰러지는 것을, 로완은 끝까지 지켜본다." },

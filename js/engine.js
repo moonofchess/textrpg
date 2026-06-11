@@ -211,21 +211,22 @@
     if (!scene.submit) return;
     if (!window.Cloud || !window.Cloud.enabled()) return;
     const key = "_sent_" + state.scene;
-    if (state.flags[key]) return;
-    state.flags[key] = true;
+    if (!scene.submitRepeat && state.flags[key]) return;
+    if (!scene.submitRepeat) state.flags[key] = true;
     let name = window.Cloud.playerName();
     if (!name) {
       name = (window.prompt("명예의 전당에 남길 이름을 입력하세요.", "이름없는 생존자") || "이름없는 생존자").slice(0, 20);
       window.Cloud.setPlayerName(name);
     }
+    const ex = typeof scene.submit === "function" ? (scene.submit(G) || {}) : scene.submit;
     window.Cloud.submitRun({
-      result: scene.submit.result,
-      phase: state.phase,
-      reputation: state.stats.reputation,
-      awareness: state.stats.awareness,
-      days: state.day,
-      survivors: state.cmdResult ? state.cmdResult.survivors : null,
-      status: state.status,
+      result: ex.result,
+      phase: ex.phase || state.phase,
+      reputation: ex.reputation != null ? ex.reputation : state.stats.reputation,
+      awareness: ex.awareness != null ? ex.awareness : state.stats.awareness,
+      days: ex.days != null ? ex.days : state.day,
+      survivors: ex.survivors !== undefined ? ex.survivors : (state.cmdResult ? state.cmdResult.survivors : null),
+      status: ex.status || state.status,
     }).then((r) => { showToast(r.ok ? "명예의 전당에 이름을 올렸다." : "전당 기록 실패."); });
   }
   function hasSave() { return !!localStorage.getItem(SAVE_KEY); }
