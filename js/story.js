@@ -77,7 +77,7 @@ const STORY = {
   },
 
   // 막사(출진 전) 공용 선택지 — selfScene으로 되돌아오며, 전투/상점 씬으로 분기
-  _campChoices: function (G, selfScene, battleScene, quarterScene) {
+  _campChoices: function (G, selfScene, battleScene, quarterScene, recruitScene) {
     const woundedMost = (g) => { let w = null; (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; }); return w; };
     const c = [];
     c.push({
@@ -119,7 +119,42 @@ const STORY = {
       next: selfScene,
     });
     if (quarterScene) c.push({ text: "보급 — 물자를 산다. (상점)", next: quarterScene });
+    if (recruitScene) c.push({ text: "인사 — 병사 모집·방출·정원", next: recruitScene });
     c.push({ text: "출진한다.", continue: true, next: battleScene });
+    return c;
+  },
+
+  // 병사 인사(영입/방출/정원) 공용 선택지
+  _recruitChoices: function (G, selfScene, returnScene) {
+    const cap = G.s.squadCap || 10;
+    const n = (G.s.squad || []).length;
+    const capPrice = 20 + (cap - 10) * 15;
+    const c = [];
+    c.push({
+      text: "병사를 영입한다. (12닢)",
+      enabled: (g) => g.s.coins >= 12 && (g.s.squad || []).length < (g.s.squadCap || 10),
+      lockedText: (n >= cap ? "정원이 찼다" : "동전 부족"),
+      effect: (g) => { if (g.spend(12)) { const r = g.recruit(); g.toast("신병 " + r.name + " 합류"); } },
+      outcome: { type: "good", text: "떠도는 병사 하나를 거두어 분대에 넣는다. 겁먹은 눈이지만, 손에 창은 쥐고 있다." },
+      next: selfScene,
+    });
+    c.push({
+      text: "병사 한도를 늘린다. (+1, " + capPrice + "닢)",
+      enabled: (g) => g.s.coins >= capPrice,
+      lockedText: "동전 부족",
+      effect: (g) => { if (g.spend(capPrice)) { g.s.squadCap = (g.s.squadCap || 10) + 1; g.toast("분대 정원 +1 (총 " + g.s.squadCap + "명)"); } },
+      outcome: { type: "good", text: "천막과 배급을 더 마련해, 한 사람을 더 받을 자리를 만든다." },
+      next: selfScene,
+    });
+    (G.s.squad || []).forEach((s) => {
+      c.push({
+        text: "방출: " + s.name + " (★" + s.skill + " 공" + (s.atk != null ? s.atk : 3 + s.skill * 2) + " 방" + (s.def != null ? s.def : 1 + s.skill) + ")",
+        effect: (g) => { g.s.squad = (g.s.squad || []).filter((x) => x !== s); g.toast(s.name + " 방출"); },
+        outcome: { type: "neutral", text: s.name + "을(를) 분대에서 내보낸다. 미안하다는 말은… 하지 않는다." },
+        next: selfScene,
+      });
+    });
+    c.push({ text: "인사를 마친다.", next: returnScene });
     return c;
   },
 
@@ -1543,7 +1578,7 @@ const STORY = {
         ],
         onComplete: (G, r) => {
           G.s.cmdResult = { survivors: r.survivors, maxSquad: 10, casualties: Math.max(0, 10 - r.survivors), result: r.result };
-          if (r.result === "held") { G.mod("reputation", r.survivors >= 7 ? 16 : 10); G.mod("awareness", 3); }
+          if (r.result === "held") { G.mod("reputation", r.survivors >= 7 ? 16 : 10); G.mod("awareness", 3); G.awardSquadXp(3); }
           else { G.mod("reputation", 4); }
           return "p3_command_after";
         },
@@ -1630,12 +1665,14 @@ const STORY = {
         ];
         const roster = (G.s.squad || []).map((s) => {
           const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
-          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 훈련 " + xpInfo + ")";
+          const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
+          const def = s.def != null ? s.def : 1 + s.skill;
+          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 공" + atk + " 방" + def + " 훈련 " + xpInfo + ")";
         }).join("  ·  ");
         arr.push({ t: "sys", c: "분대: " + (roster || "없음") });
         return arr;
       },
-      choices: (G) => STORY._campChoices(G, "squad_camp", "skirmish"),
+      choices: (G) => STORY._campChoices(G, "squad_camp", "skirmish", "squad_quarter", "squad_recruit"),
     },
 
     squad_quarter: {
@@ -1645,6 +1682,15 @@ const STORY = {
         { t: "sys", c: "가진 동전: " + G.s.coins + "닢" },
       ],
       choices: (G) => STORY._shopChoices(G, "squad_quarter", "squad_camp"),
+    },
+
+    squad_recruit: {
+      title: "인사 — 병사 모집",
+      text: (G) => [
+        { t: "narr", c: "막사 입구, 일자리를 찾는 떠돌이들이 기웃거린다. 누구를 거두고 누구를 내보낼지는 지휘관의 몫이다." },
+        { t: "sys", c: "분대 " + (G.s.squad || []).length + " / 정원 " + (G.s.squadCap || 10) + " · 동전 " + G.s.coins + "닢" },
+      ],
+      choices: (G) => STORY._recruitChoices(G, "squad_recruit", "squad_camp"),
     },
 
     skirmish: {
@@ -1679,6 +1725,7 @@ const STORY = {
           G.s.lastDead = r.dead;
           G.mod("reputation", r.result === "held" ? 6 : 2);
           G.addCoins(8);
+          if (r.result === "held") G.awardSquadXp(2);
           return "skirmish_after";
         },
       },
@@ -1689,7 +1736,7 @@ const STORY = {
       onEnter: (G) => {
         G.s.campTrained = false; G.s.campRested = false;
         G.mod("hunger", -5); G.addRation(1);
-        if ((G.s.skirmishIndex || 0) < 3 && (G.s.squad || []).length < 10) {
+        if ((G.s.skirmishIndex || 0) < 3 && (G.s.squad || []).length < (G.s.squadCap || 10)) {
           const r = G.recruit();
           G.s.lastRecruit = r.name;
         } else {
@@ -1773,12 +1820,14 @@ const STORY = {
         ];
         const roster = (G.s.squad || []).map((s) => {
           const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
-          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 훈련 " + xpInfo + ")";
+          const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
+          const def = s.def != null ? s.def : 1 + s.skill;
+          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 공" + atk + " 방" + def + " 훈련 " + xpInfo + ")";
         }).join("  ·  ");
         arr.push({ t: "sys", c: "분대 (" + (G.s.squad || []).length + "명): " + (roster || "없음") });
         return arr;
       },
-      choices: (G) => STORY._campChoices(G, "endless_camp", "endless_battle", "endless_quarter"),
+      choices: (G) => STORY._campChoices(G, "endless_camp", "endless_battle", "endless_quarter", "endless_recruit"),
     },
 
     endless_quarter: {
@@ -1788,6 +1837,15 @@ const STORY = {
         { t: "sys", c: "가진 동전: " + G.s.coins + "닢" },
       ],
       choices: (G) => STORY._shopChoices(G, "endless_quarter", "endless_camp"),
+    },
+
+    endless_recruit: {
+      title: "인사 — 병사 모집",
+      text: (G) => [
+        { t: "narr", c: "끝없는 싸움터에도 굶주린 떠돌이는 모여든다. 누구를 거두고 누구를 내보낼지 정한다." },
+        { t: "sys", c: "분대 " + (G.s.squad || []).length + " / 정원 " + (G.s.squadCap || 10) + " · 동전 " + G.s.coins + "닢" },
+      ],
+      choices: (G) => STORY._recruitChoices(G, "endless_recruit", "endless_camp"),
     },
 
     endless_battle: {
@@ -1817,6 +1875,7 @@ const STORY = {
             G.s.lastDead = r.dead;
             G.addCoins(10 + G.s.endlessStage * 2);
             G.mod("reputation", 3);
+            G.awardSquadXp(2);
             return "endless_after";
           }
           return "endless_defeat";
@@ -1828,7 +1887,7 @@ const STORY = {
       title: "한 진을 넘기고",
       onEnter: (G) => {
         G.s.campTrained = false; G.s.campRested = false;
-        if ((G.s.squad || []).length < 10) { const r = G.recruit(); G.s.lastRecruit = r.name; }
+        if ((G.s.squad || []).length < (G.s.squadCap || 10)) { const r = G.recruit(); G.s.lastRecruit = r.name; }
         else G.s.lastRecruit = null;
       },
       text: (G) => {

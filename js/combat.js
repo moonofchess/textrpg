@@ -437,10 +437,13 @@
     const tag = clickable ? "button" : "div";
     const cls = "soldier" + low + (clickable ? " sol-toggle" : "");
     const attr = clickable ? ' data-name="' + s.name.replace(/"/g, "") + '"' : "";
+    const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
+    const def = s.def != null ? s.def : 1 + s.skill;
     return "<" + tag + ' class="' + cls + '"' + attr + '><div class="sol-top"><span class="sol-name">' + s.name +
       '</span><span class="sol-skill">' + stars + "</span></div>" +
       '<div class="sol-bar"><div class="sol-fill" style="width:' + pct + '%"></div></div>' +
-      '<div class="sol-hp">' + Math.max(0, s.hp) + " / " + s.maxHp + "</div></" + tag + ">";
+      '<div class="sol-hp">' + Math.max(0, s.hp) + " / " + s.maxHp + '</div>' +
+      '<div class="sol-stat">공 ' + atk + " · 방 " + def + "</div></" + tag + ">";
   }
 
   const Skirmish = {
@@ -544,13 +547,14 @@
       let playerDmg = 0;
       let frontGuard = false, backSupport = false;
 
+      const atkOf = (s) => (s.atk != null ? s.atk : 3 + s.skill * 2);
       if (order === "orders") {
         if (st.frontAction === "attack") {
-          this._rank(1).forEach((s) => { playerDmg += 2 + s.skill * 2; });
+          this._rank(1).forEach((s) => { playerDmg += atkOf(s); });
           playerDmg += (G.s.stats.attack || 0);
         } else frontGuard = true;
         if (st.backAction === "attack") {
-          this._rank(2).forEach((s) => { playerDmg += 1 + s.skill * 2; });
+          this._rank(2).forEach((s) => { playerDmg += Math.round(atkOf(s) * 0.7); });
         } else backSupport = true;
         log.push({ t: "narr", c: "1열 " + (frontGuard ? "방어" : "공격") + ", 2열 " + (backSupport ? "지원" : "공격") + "." });
       } else if (order === "swap") {
@@ -585,7 +589,8 @@
         const strike = (tgt, amount) => {
           if (!tgt || tgt.hp <= 0 || amount <= 0) return;
           if (rand(1, 100) <= evaOf(tgt)) { dodges++; return; }
-          tgt.hp -= amount; dealtTotal += amount;
+          const dmg = Math.max(1, amount - (tgt.def != null ? tgt.def : 1 + tgt.skill));
+          tgt.hp -= dmg; dealtTotal += dmg;
           if (tgt.hp <= 0) { tgt.hp = 0; st.deadNames.push(tgt.name); st.morale = clamp(st.morale - 12, 0, 100); log.push({ t: "danger", c: tgt.name + "이(가) 쓰러졌다." }); }
         };
         let aoe = Math.round(base * 1.5 * fmult * moraleFactor), g2 = 0;

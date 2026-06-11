@@ -409,6 +409,7 @@ body { position: relative; }
 .sol-bar { height: 6px; background: #0b0908; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; margin: 5px 0 3px; }
 .sol-fill { height: 100%; background: linear-gradient(90deg, #5a201a, var(--blood-soft)); transition: width 0.4s ease; }
 .sol-hp { font-size: 0.7rem; color: var(--ink-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.sol-stat { font-size: 0.68rem; color: var(--amber); text-align: right; margin-top: 1px; }
 .rank-block { max-width: 720px; margin-bottom: 12px; }
 .rank-label { font-size: 0.78rem; letter-spacing: 0.06em; color: var(--ink-dim); margin-bottom: 6px; padding-left: 2px; }
 .rank-label.rank1 { color: var(--blood-soft); }

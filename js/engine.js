@@ -35,6 +35,7 @@
       inventory: [],
       supplies: {},
       squad: [],
+      squadCap: 10,
       skirmishIndex: 0,
       phase: "1부 1페이즈",
       location: "진흙골",
@@ -88,19 +89,32 @@
       const r = Math.random();
       const skill = r < 0.7 ? 1 : r < 0.95 ? 2 : 3;
       const maxHp = 16 + skill * 3;
-      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill, xp: 0 };
+      const atk = 3 + skill * 2 + Math.floor(Math.random() * 2);
+      const def = 1 + skill + Math.floor(Math.random() * 2);
+      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill, xp: 0, atk: atk, def: def };
     },
-    // 다음 랭크까지 필요한 훈련 경험치 (1→2:1, 2→3:3, 3→4:5, 4→5:7)
+    // 다음 랭크까지 필요한 경험치 (1→2:1, 2→3:3, 3→4:5, 4→5:7)
     xpToNext(skill) { return 2 * skill - 1; },
+    addSoldierXp(s, n) {
+      if (!s || s.hp <= 0) return 0;
+      if (s.atk == null) s.atk = 3 + s.skill * 2;   // 구 세이브 보정
+      if (s.def == null) s.def = 1 + s.skill;
+      s.xp = (s.xp || 0) + n;
+      let lv = 0;
+      while (s.skill < 5 && s.xp >= G.xpToNext(s.skill)) { s.xp -= G.xpToNext(s.skill); s.skill++; s.atk += 2; s.def += 1; lv++; }
+      if (s.skill >= 5) s.xp = 0;
+      return lv;
+    },
     trainSquad() {
       let leveled = 0;
-      (state.squad || []).forEach((s) => {
-        if (s.hp <= 0) return;
-        s.xp = (s.xp || 0) + 1;
-        while (s.skill < 5 && s.xp >= G.xpToNext(s.skill)) { s.xp -= G.xpToNext(s.skill); s.skill++; leveled++; }
-        if (s.skill >= 5) s.xp = 0;
-      });
+      (state.squad || []).forEach((s) => { leveled += G.addSoldierXp(s, 1); });
       if (leveled > 0) G.toast(leveled + "명의 기량 ★이 올랐다!");
+      return leveled;
+    },
+    awardSquadXp(n) {
+      let leveled = 0;
+      (state.squad || []).forEach((s) => { leveled += G.addSoldierXp(s, n); });
+      if (leveled > 0) G.toast("전투 경험으로 " + leveled + "명의 기량 ★이 올랐다!");
       return leveled;
     },
     initSquad(n) {
