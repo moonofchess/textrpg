@@ -155,7 +155,6 @@
       actionBtn(cw, "공격", "틈을 실어 약점을 친다", () => self._act("strike"));
       actionBtn(cw, "방어", "이번 피해를 크게 줄인다", () => self._act("brace"));
       actionBtn(cw, "관찰", "틈 +2 (피해 감수)", () => self._act("observe"));
-      if (cfg.allowFlee !== false) actionBtn(cw, "후퇴 / 유인", "전투 이탈", () => self._act("flee"));
       el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
     },
 
@@ -199,7 +198,7 @@
 
       // 자동 회피 (회피율 기반) — 들어오는 피해가 있을 때 시도
       if (enemyDmg > 0) {
-        const evaChance = clamp(10 + (G.s.stats.evasion || 0) * 4 + (braced ? 15 : 0) - (intent.type === "debuff" ? 12 : 0), 5, 88);
+        const evaChance = clamp(6 + (G.s.stats.evasion || 0) * 3 + (braced ? 15 : 0) - (intent.type === "debuff" ? 12 : 0), 3, 70);
         if (rand(1, 100) <= evaChance) {
           dodged = true;
           enemyDmg = 0;
@@ -572,17 +571,29 @@
       if (!this._rank(1).length) this._living().forEach((s) => s.rank = 1);
       if (healFront) this._rank(1).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + healFront); });
 
-      let incoming = Math.round(threat * 3 * incomingMult * moraleFactor);
-      let dealtTotal = 0, dodges = 0, guard2 = 0;
-      while (incoming > 0 && this._rank(1).length && guard2++ < 50) {
-        const f = this._rank(1);
-        const tgt = f[Math.floor(Math.random() * f.length)];
-        const eva = clamp(15 + (G.s.stats.evasion || 0) * 3 + tgt.skill * 3, 5, 80);
-        const hit = Math.min(incoming, G.rand(5, 12));
-        incoming -= hit;
-        if (rand(1, 100) <= eva) { dodges++; continue; }
-        tgt.hp -= hit; dealtTotal += hit;
+      let dealtTotal = 0, dodges = 0;
+      const evaOf = (s) => clamp(12 + (G.s.stats.evasion || 0) * 3 + s.skill * 3, 5, 72);
+      const strike = (tgt, amount) => {
+        if (!tgt || tgt.hp <= 0 || amount <= 0) return;
+        if (rand(1, 100) <= evaOf(tgt)) { dodges++; return; }
+        tgt.hp -= amount; dealtTotal += amount;
         if (tgt.hp <= 0) { tgt.hp = 0; st.deadNames.push(tgt.name); st.morale = clamp(st.morale - 12, 0, 100); log.push({ t: "danger", c: tgt.name + "이(가) 쓰러졌다." }); }
+      };
+
+      // 범위 공격 — 전열 다수에게 분산
+      let aoe = Math.round(threat * 2 * incomingMult * moraleFactor);
+      let guard2 = 0;
+      while (aoe > 0 && this._rank(1).length && guard2++ < 50) {
+        const f = this._rank(1);
+        strike(f[Math.floor(Math.random() * f.length)], Math.min(aoe, G.rand(4, 9)));
+        aoe -= 7;
+      }
+      // 집중 공격 — 전열 한 명에게 큰 피해
+      const fr = this._rank(1);
+      if (fr.length) {
+        const focusTgt = fr[Math.floor(Math.random() * fr.length)];
+        log.push({ t: "danger", c: "적이 " + focusTgt.name + "에게 화력을 집중한다!" });
+        strike(focusTgt, Math.round(threat * 4 * incomingMult * moraleFactor));
       }
       G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0);
 

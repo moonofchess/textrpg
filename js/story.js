@@ -1017,16 +1017,16 @@ const STORY = {
           name: "잿빛 늑대 무리",
           grade: "1등급 소형 · 무리",
           art: "mob-ashwolf",
-          maxHp: 28,
+          maxHp: 40,
           weakness: "두목의 목",
           intro: [
             { t: "danger", c: "붉은 눈 여섯 쌍이 풀숲에서 떠오른다. 두목으로 보이는 큰 놈이 앞에 선다." },
             { t: "think", c: "두목을 꺾으면 나머지는 흩어진다. 무리 사냥의 약점은, 무리를 묶는 한 마리다." },
           ],
           moves: [
-            { type: "light", name: "측면 물기", dmg: 7, weight: 3 },
-            { type: "heavy", name: "일제 강습", tell: "늑대들이 한 점으로 몰려든다 — 일제 강습 준비!", dmg: 15, weight: 2 },
-            { type: "guarded", name: "두목이 으르렁대며 무리를 다잡는다", dmg: 2, weight: 2 },
+            { type: "light", name: "측면 물기", dmg: 10, weight: 3 },
+            { type: "heavy", name: "일제 강습", tell: "늑대들이 한 점으로 몰려든다 — 일제 강습 준비!", dmg: 22, weight: 2 },
+            { type: "guarded", name: "두목이 으르렁대며 무리를 다잡는다", dmg: 3, weight: 2 },
           ],
         },
         baseDmg: 5,
@@ -1380,16 +1380,16 @@ const STORY = {
           name: "석피 멧돼지",
           grade: "3등급 중형",
           art: "mob-stonehide-boar",
-          maxHp: 42,
+          maxHp: 56,
           weakness: "드러난 복부",
           intro: [
             { t: "danger", c: "성인 수소만 한 몸집. 돌 같은 가죽은 창을 튕겨낸다. 약점은 단 하나, 돌진 뒤 숨을 고를 때 드러나는 무른 복부." },
             { t: "think", c: "정면은 죽음이다. 돌진을 흘리고, 놈이 숨을 고를 때 복부를 노린다. 그게 유일한 길이다." },
           ],
           moves: [
-            { type: "heavy", name: "돌진", tell: "석피 멧돼지가 땅을 박찬다 — 돌진!", dmg: 20, weight: 3 },
-            { type: "light", name: "머리 휘두르기", dmg: 8, weight: 2 },
-            { type: "guarded", name: "거친 숨을 고른다 (복부가 드러난다)", dmg: 1, weight: 2 },
+            { type: "heavy", name: "돌진", tell: "석피 멧돼지가 땅을 박찬다 — 돌진!", dmg: 28, weight: 3 },
+            { type: "light", name: "머리 휘두르기", dmg: 12, weight: 2 },
+            { type: "guarded", name: "거친 숨을 고른다 (복부가 드러난다)", dmg: 2, weight: 2 },
           ],
         },
         baseDmg: 6,
@@ -1536,6 +1536,7 @@ const STORY = {
         arr.push({ t: "think", c: "강한 부대를 만들 재주는 없다. 그저 한 명이라도 덜 죽이고 싶을 뿐이다." });
         return arr;
       },
+      onEnter: (G) => { G.s.campPrepped = false; },
       choices: [
         { text: "막사로 가 부대를 점검한다.", continue: true, next: "squad_camp" },
       ],
@@ -1543,7 +1544,6 @@ const STORY = {
 
     squad_camp: {
       title: "막사 — 출진 전",
-      onEnter: (G) => { G.s.campPrepped = false; },
       text: (G) => {
         const idx = (G.s.skirmishIndex || 0) + 1;
         const arr = [
@@ -1562,11 +1562,12 @@ const STORY = {
         };
         const c = [];
         c.push({
-          text: "전 부대를 굴린다. (기량 ★ +1)",
-          enabled: (g) => !g.s.campPrepped && (g.s.squad || []).some((s) => s.skill < 5),
+          text: "전 부대를 혹독하게 굴린다. (기량 ★ +1, 평생 한 번)",
+          show: (g) => !g.flag("squad_drilled"),
+          enabled: (g) => !g.s.campPrepped,
           lockedText: "출진 준비는 한 번뿐이다",
-          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
-          outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 욕설과 신음 끝에, 부하들의 손놀림이 한결 야물어졌다." },
+          effect: (g) => { g.setFlag("squad_drilled"); g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
+          outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 욕설과 신음 끝에, 부하들의 손놀림이 한결 야물어졌다. 하지만 이런 강훈련은 두 번 다시 짜낼 여유가 없다." },
           next: "squad_camp",
         });
         c.push({
@@ -1660,6 +1661,7 @@ const STORY = {
     skirmish_after: {
       title: "교전이 끝나고",
       onEnter: (G) => {
+        G.s.campPrepped = false;
         G.mod("hunger", -5); G.addRation(1);
         if ((G.s.skirmishIndex || 0) < 3 && (G.s.squad || []).length < 10) {
           const r = G.recruit();

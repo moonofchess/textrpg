@@ -76,7 +76,7 @@
       if (s) G.toast("획득: " + s.name + (n > 1 ? " ×" + n : ""));
     },
     supplyCount(id) { return (state.supplies && state.supplies[id]) || 0; },
-    makeSoldier(minSkill, maxSkill) {
+    makeSoldier() {
       const names = (typeof STORY !== "undefined" && STORY.soldierNames) || ["병사"];
       if (!state.squad) state.squad = [];
       const used = new Set(state.squad.map((s) => s.name));
@@ -84,17 +84,19 @@
       let tries = 0;
       while (used.has(name) && tries++ < 40) name = names[Math.floor(Math.random() * names.length)];
       if (used.has(name)) name = name + " 2세";
-      const skill = minSkill + Math.floor(Math.random() * (maxSkill - minSkill + 1));
+      // 대부분 별 1개, 가끔 2개, 드물게 3개
+      const r = Math.random();
+      const skill = r < 0.7 ? 1 : r < 0.95 ? 2 : 3;
       const maxHp = 16 + skill * 3;
       return { name: name, hp: maxHp, maxHp: maxHp, skill: skill };
     },
     initSquad(n) {
       state.squad = [];
-      for (let i = 0; i < n; i++) state.squad.push(G.makeSoldier(1, 4));
+      for (let i = 0; i < n; i++) state.squad.push(G.makeSoldier());
     },
     recruit() {
       if (!state.squad) state.squad = [];
-      const s = G.makeSoldier(1, 3);
+      const s = G.makeSoldier();
       state.squad.push(s);
       return s;
     },
