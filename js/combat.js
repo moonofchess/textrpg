@@ -454,12 +454,15 @@
       const sq = (G.s.squad || []).filter((s) => s.hp > 0);
       sq.forEach((s, i) => { if (s.rank !== 1 && s.rank !== 2) s.rank = i < 5 ? 1 : 2; });
       const evalNum = (v, d) => (typeof v === "function" ? v(G) : (typeof v === "number" ? v : d));
+      const emax = evalNum(battle.enemy && battle.enemy.maxHp, 100);
       this._st = {
         phase: "deploy",
-        pressure: clamp(evalNum(battle.pressure, 20), 0, 100),
+        emax: emax, ehp: emax,
         morale: clamp(evalNum(battle.morale, 60), 0, 100),
-        wave: 0,
+        turn: 0,
         deadNames: [],
+        frontAction: "attack",
+        backAction: "support",
         log: (battle.intro || []).slice(),
       };
       this._renderDeploy();
@@ -496,136 +499,135 @@
       cw.innerHTML = "";
       actionBtn(cw, "전투 시작", "이 진형으로 맞선다", () => {
         if (!self._rank(1).length) { self._living().forEach((s) => s.rank = 1); }
-        st.phase = "battle"; self._pickTell(); self._renderBattle();
+        st.phase = "battle"; self._renderBattle();
       });
       el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
     },
 
     // ---- 전투 단계 ----
-    _pickTell() {
-      const pool = [
-        { name: "전열을 휩쓰는 범위 공격", mult: 1.0 },
-        { name: "전열을 짓밟는 강타", mult: 1.55 },
-        { name: "밀어붙이며 진격한다", mult: 0.6 },
-      ];
-      this._st.tell = pool[rand(0, pool.length - 1)];
-    },
-
     _renderBattle() {
       const G = window.G, st = this._st, battle = this._battle, self = this;
-      const total = battle.waves.length;
-      el("scene-title").textContent = "지휘 — 제 " + (st.wave + 1) + " / " + total + " 파";
-      const wave = battle.waves[st.wave];
+      const e = battle.enemy || {};
+      el("scene-title").textContent = "지휘 — " + (e.name || "적 부대");
       let html = '<div class="cmd-panel">';
-      html += bar("적 압력", st.pressure, 100, "pressure");
-      html += bar("사기", st.morale, 100, "morale");
+      if (e.art) html += '<div class="cbt-art"><img src="assets/img/' + e.art + '.png" alt="" onerror="this.parentNode.style.display=\'none\'"></div>';
+      html += '<div class="cbt-enemy"><span class="cbt-grade">' + (e.grade || "적 부대") + '</span><span class="cbt-ename">' + (e.name || "") + "</span></div>";
+      html += bar("적 부대 체력", st.ehp, st.emax, "ehp");
+      html += bar("아군 사기", st.morale, 100, "morale");
       html += "</div>";
-      if (wave && wave.desc) html += '<div class="cmd-wave">' + wave.desc.map((p) => '<p class="' + (p.t || "narr") + '">' + p.c + "</p>").join("") + "</div>";
-      html += '<p class="danger cbt-intent">▶ 적: ' + st.tell.name + "</p>";
       html += this._formationHTML(false);
       html += logHTML(st.log);
       el("scene-text").innerHTML = html;
 
       const cw = el("choices");
       cw.innerHTML = "";
-      actionBtn(cw, "전열 방어", "1열이 막는다 · 피해 급감", () => self._turn("guard"));
-      actionBtn(cw, "후열 지원", "2열이 전열을 치료·엄호", () => self._turn("support"));
-      actionBtn(cw, "일제 공격", "양 열 총공격 · 전열 노출", () => self._turn("allout"));
-      actionBtn(cw, "진형 교대", "1열↔2열 · 부상자 후방으로", () => self._turn("swap"));
+      const tog = (label, on, fn) => {
+        const b = document.createElement("button");
+        b.className = "choice toggle" + (on ? " on" : "");
+        b.textContent = label;
+        b.addEventListener("click", fn);
+        cw.appendChild(b);
+      };
+      tog("1열 ▶ 공격", st.frontAction === "attack", () => { st.frontAction = "attack"; self._renderBattle(); });
+      tog("1열 ▶ 방어", st.frontAction === "guard", () => { st.frontAction = "guard"; self._renderBattle(); });
+      tog("2열 ▶ 공격", st.backAction === "attack", () => { st.backAction = "attack"; self._renderBattle(); });
+      tog("2열 ▶ 지원", st.backAction === "support", () => { st.backAction = "support"; self._renderBattle(); });
+      actionBtn(cw, "▶ 명령 실행", "선택한 대로 한 합 싸운다", () => self._turn("orders"));
+      actionBtn(cw, "진형 교대", "1열↔2열 · 이번 합 방어적", () => self._turn("swap"));
       actionBtn(cw, "사기 진작", "허기 소모 · 사기 +25", () => self._turn("rally"));
       el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
     },
 
     _turn(order) {
-      const G = window.G, st = this._st, battle = this._battle;
-      const wave = battle.waves[st.wave];
-      const threat = wave.threat || 4;
+      const G = window.G, st = this._st, battle = this._battle, e = battle.enemy || {};
       const log = [];
-      let dPressure = threat; // 적은 매 턴 밀고 들어온다
-      let incomingMult = st.tell.mult;
-      let healFront = 0;
+      let playerDmg = 0;
+      let frontGuard = false, backSupport = false;
 
-      if (order === "guard") {
-        incomingMult *= 0.4; dPressure -= 6;
-        log.push({ t: "good", c: "“1열, 방패 들어! 버텨라!” 전열이 몸으로 충격을 받아낸다." });
-      } else if (order === "support") {
-        healFront = 7; dPressure -= 8; incomingMult *= 0.85;
-        log.push({ t: "good", c: "“2열, 부상자 끌어내고 빈자리 메워!” 후열이 전열을 치료하며 받친다." });
-      } else if (order === "allout") {
-        dPressure -= 16; incomingMult *= 1.4;
-        log.push({ t: "narr", c: "“전원 찔러, 밀어내!” 양 열이 한꺼번에 적을 들이친다 — 대신 전열이 그대로 노출된다." });
+      if (order === "orders") {
+        if (st.frontAction === "attack") {
+          this._rank(1).forEach((s) => { playerDmg += 2 + s.skill * 2; });
+          playerDmg += (G.s.stats.attack || 0);
+        } else frontGuard = true;
+        if (st.backAction === "attack") {
+          this._rank(2).forEach((s) => { playerDmg += 1 + s.skill * 2; });
+        } else backSupport = true;
+        log.push({ t: "narr", c: "1열 " + (frontGuard ? "방어" : "공격") + ", 2열 " + (backSupport ? "지원" : "공격") + "." });
       } else if (order === "swap") {
         this._living().forEach((s) => { s.rank = s.rank === 1 ? 2 : 1; });
-        incomingMult *= 0.7; dPressure += 2;
+        frontGuard = true;
         log.push({ t: "narr", c: "“1열 뒤로, 2열 앞으로!” 진형이 회전하며 지친 전열이 숨을 돌린다." });
       } else if (order === "rally") {
         if (G.s.stats.hunger >= 8) {
           G.mod("hunger", -10); st.morale = clamp(st.morale + 25, 0, 100);
-          log.push({ t: "good", c: "“우린 안 죽어! 본대가 온다, 조금만 더 버텨!” 목이 터져라 외친다. 흔들리던 전열이 다시 곧추선다. (사기 +25)" });
+          log.push({ t: "good", c: "“조금만 더, 끝장낸다!” 목이 터져라 외친다. 흔들리던 전열이 다시 곧추선다. (사기 +25)" });
         } else {
           log.push({ t: "bad", c: "외칠 기운조차 없다. 허기가 발목을 잡는다." });
         }
       }
 
-      const moraleFactor = clamp(1 + (60 - st.morale) / 120, 0.6, 1.6);
-      if (!this._rank(1).length) this._living().forEach((s) => s.rank = 1);
-      if (healFront) this._rank(1).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + healFront); });
-
-      let dealtTotal = 0, dodges = 0;
-      const evaOf = (s) => clamp(12 + (G.s.stats.evasion || 0) * 3 + s.skill * 3, 5, 72);
-      const strike = (tgt, amount) => {
-        if (!tgt || tgt.hp <= 0 || amount <= 0) return;
-        if (rand(1, 100) <= evaOf(tgt)) { dodges++; return; }
-        tgt.hp -= amount; dealtTotal += amount;
-        if (tgt.hp <= 0) { tgt.hp = 0; st.deadNames.push(tgt.name); st.morale = clamp(st.morale - 12, 0, 100); log.push({ t: "danger", c: tgt.name + "이(가) 쓰러졌다." }); }
-      };
-
-      // 범위 공격 — 전열 다수에게 분산
-      let aoe = Math.round(threat * 2 * incomingMult * moraleFactor);
-      let guard2 = 0;
-      while (aoe > 0 && this._rank(1).length && guard2++ < 50) {
-        const f = this._rank(1);
-        strike(f[Math.floor(Math.random() * f.length)], Math.min(aoe, G.rand(4, 9)));
-        aoe -= 7;
+      // 아군 공격 → 적 부대 체력
+      if (playerDmg > 0) {
+        st.ehp = Math.max(0, st.ehp - playerDmg);
+        FX.floatDmg("-" + playerDmg, "enemy"); FX.flash("enemy");
+        log.push({ t: "good", c: "적 부대에 " + playerDmg + " 피해를 입혔다." });
       }
-      // 집중 공격 — 전열 한 명에게 큰 피해
-      const fr = this._rank(1);
-      if (fr.length) {
-        const focusTgt = fr[Math.floor(Math.random() * fr.length)];
-        log.push({ t: "danger", c: "적이 " + focusTgt.name + "에게 화력을 집중한다!" });
-        strike(focusTgt, Math.round(threat * 4 * incomingMult * moraleFactor));
-      }
-      G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0);
+      if (backSupport) this._rank(1).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 7); });
 
-      if (dealtTotal > 0) {
-        st.morale = clamp(st.morale - Math.floor(dealtTotal / 8), 0, 100);
-        const romanShare = Math.max(0, Math.floor(dealtTotal / 14) - Math.floor((G.s.stats.defense || 0) / 3));
-        if (romanShare > 0) G.mod("health", -romanShare);
-        FX.flash("hit"); FX.shake(); FX.floatDmg("-" + dealtTotal, "player");
-        log.push({ t: "danger", c: "전열이 " + dealtTotal + " 피해를 입었다." + (dodges ? " (" + dodges + "회 회피)" : "") });
-      } else {
-        FX.floatDmg(dodges ? "전원 회피!" : "격퇴", "dodge");
-        if (dodges) log.push({ t: "good", c: "전열이 " + dodges + "회 공격을 모두 흘려냈다." });
-      }
+      // 적 반격 — 적이 살아 있을 때만, 전열에 범위 + 집중
+      if (st.ehp > 0) {
+        const moraleFactor = clamp(1 + (60 - st.morale) / 120, 0.6, 1.6);
+        const fmult = frontGuard ? 0.4 : 1.0;
+        const base = e.dmg || 8;
+        if (!this._rank(1).length) this._living().forEach((s) => s.rank = 1);
+        let dealtTotal = 0, dodges = 0;
+        const evaOf = (s) => clamp(12 + (G.s.stats.evasion || 0) * 3 + s.skill * 3, 5, 72);
+        const strike = (tgt, amount) => {
+          if (!tgt || tgt.hp <= 0 || amount <= 0) return;
+          if (rand(1, 100) <= evaOf(tgt)) { dodges++; return; }
+          tgt.hp -= amount; dealtTotal += amount;
+          if (tgt.hp <= 0) { tgt.hp = 0; st.deadNames.push(tgt.name); st.morale = clamp(st.morale - 12, 0, 100); log.push({ t: "danger", c: tgt.name + "이(가) 쓰러졌다." }); }
+        };
+        let aoe = Math.round(base * 1.5 * fmult * moraleFactor), g2 = 0;
+        while (aoe > 0 && this._rank(1).length && g2++ < 40) {
+          const f = this._rank(1);
+          strike(f[Math.floor(Math.random() * f.length)], Math.min(aoe, G.rand(3, 8)));
+          aoe -= 6;
+        }
+        const fr = this._rank(1);
+        if (fr.length) {
+          const ft = fr[Math.floor(Math.random() * fr.length)];
+          log.push({ t: "danger", c: "적이 " + ft.name + "에게 화력을 집중한다!" });
+          strike(ft, Math.round(base * 2 * fmult * moraleFactor));
+        }
+        G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0);
 
-      st.pressure = clamp(st.pressure + dPressure, 0, 100);
+        if (dealtTotal > 0) {
+          st.morale = clamp(st.morale - Math.floor(dealtTotal / 8), 0, 100);
+          const romanShare = Math.max(0, Math.floor(dealtTotal / 14) - Math.floor((G.s.stats.defense || 0) / 3));
+          if (romanShare > 0) G.mod("health", -romanShare);
+          FX.flash("hit"); FX.shake(); FX.floatDmg("-" + dealtTotal, "player");
+          log.push({ t: "danger", c: "전열이 " + dealtTotal + " 피해를 입었다." + (dodges ? " (" + dodges + "회 회피)" : "") });
+        } else if (dodges) {
+          FX.floatDmg("전원 회피!", "dodge");
+          log.push({ t: "good", c: "전열이 " + dodges + "회 공격을 흘려냈다." });
+        }
 
-      if (st.morale <= 0) {
-        const f = this._living();
-        if (f.length) { f[0].hp = 0; st.deadNames.push(f[0].name + "(이탈)"); G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0); log.push({ t: "bad", c: f[0].name + "이(가) 창을 버리고 달아났다. 사기가 바닥이다." }); }
-        st.morale = 15;
+        if (st.morale <= 0) {
+          const f = this._living();
+          if (f.length) { f[0].hp = 0; st.deadNames.push(f[0].name + "(이탈)"); G.s.squad = (G.s.squad || []).filter((s) => s.hp > 0); log.push({ t: "bad", c: f[0].name + "이(가) 창을 버리고 달아났다. 사기가 바닥이다." }); }
+          st.morale = 15;
+        }
       }
 
       window.REFRESH_SIDEBAR && window.REFRESH_SIDEBAR();
       st.log.push(...log);
 
+      if (st.ehp <= 0) { this._finish("held"); return; }
       if (this._living().length <= 0) { this._finish("wiped"); return; }
-      if (st.pressure >= 100) { this._finish("overrun"); return; }
       if (G.s.stats.health <= 0) { window.GO("game_over"); return; }
 
-      st.wave++;
-      if (st.wave >= battle.waves.length) { this._finish("held"); return; }
-      this._pickTell();
+      st.turn++;
       this._renderBattle();
     },
 
@@ -636,9 +638,8 @@
       window.REFRESH_SIDEBAR && window.REFRESH_SIDEBAR();
       el("scene-title").textContent = "전투 종료";
       let head;
-      if (result === "held") head = "적이 물러났다. 진형은 끝내 무너지지 않았다.";
-      else if (result === "wiped") head = "분대가 전멸했다. 당신만이 살아 남았다.";
-      else head = "압력을 버티지 못하고 진지를 내주며 후퇴한다.";
+      if (result === "held") head = "적 부대를 끝내 궤멸시켰다. 전열은 무너지지 않았다.";
+      else head = "분대가 전멸했다. 당신만이 살아 남았다.";
       st.log.push({ t: result === "held" ? "good" : "danger", c: head });
       if (st.deadNames.length) st.log.push({ t: "sys", c: "전사: " + st.deadNames.join(", ") });
       el("scene-text").innerHTML = rosterHTML(G.s.squad || []) + logHTML(st.log);

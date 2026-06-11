@@ -1448,19 +1448,12 @@ const STORY = {
         useIndex: false,
         battles: [
           {
-            morale: (G) => 55 + (G.flag("rally_helga") ? 12 : 0) + (G.flag("helga_bond") ? 4 : 0) + (G.flag("isabel_contact") ? 4 : 0) + (G.flag("drilled_hard") ? 4 : 0),
-            pressure: (G) => 20 - (G.flag("rally_terrain") ? 10 : 0),
+            morale: (G) => 55 + (G.flag("rally_helga") ? 12 : 0) + (G.flag("helga_bond") ? 4 : 0) + (G.flag("isabel_contact") ? 4 : 0) + (G.flag("rally_terrain") ? 6 : 0) + (G.flag("drilled_hard") ? 4 : 0),
             intro: [
-              { t: "danger", c: "도적과 마물이 동시에 측면을 두드린다. 당신의 등에, 처음으로 열 명의 목숨이 매달렸다." },
-              { t: "think", c: "자작 본대가 도착할 때까지. 그때까지만 버티면 된다. 한 명이라도 더 데리고." },
+              { t: "danger", c: "도적과 마물이 한꺼번에 측면을 두드린다. 당신의 등에, 처음으로 열 명의 목숨이 매달렸다." },
+              { t: "think", c: "버티는 걸론 안 끝난다. 저 무리를 끝까지 부숴야, 우리가 산다." },
             ],
-            waves: [
-              { threat: 3, desc: [{ t: "narr", c: "제1파. 도적 선발대가 함성을 지르며 달려든다. 아직은 떠보는 공격이다." }] },
-              { threat: 4, desc: [{ t: "narr", c: "제2파. 측면 풀숲에서 잿빛 늑대가 전열의 옆구리를 노린다." }] },
-              { threat: 4, desc: [{ t: "narr", c: "제3파. 도적 본대가 밀고 들어온다. 머릿수에 겁먹은 전열의 사기가 시험대에 오른다." }] },
-              { threat: 5, desc: [{ t: "danger", c: "제4파. 비늘몸 한 마리가 난입해 난전이 벌어진다. 비명과 피." }] },
-              { threat: 6, desc: [{ t: "danger", c: "최후의 파도. 멀리 자작의 뿔나팔이 울린다 — 증원이 온다! 이 한 번만 더 버텨라!" }] },
-            ],
+            enemy: { name: "도적·마물 혼성 무리", grade: "혼성 적 부대", maxHp: 130, dmg: 9 },
           },
         ],
         onComplete: (G, r) => {
@@ -1611,41 +1604,25 @@ const STORY = {
         useIndex: true,
         battles: [
           {
-            pressure: 12,
             intro: [
-              { t: "danger", c: "첫 임무. 패주한 도적 잔당이 인근 마을을 노린다. 이들을 길목에서 끊어야 한다." },
-              { t: "think", c: "큰 싸움은 아니다. 하지만 부하들에겐 첫 시험이다. 한 명도 잃지 않고 끝내고 싶다." },
+              { t: "danger", c: "첫 임무. 패주한 도적 잔당이 인근 마을을 노린다. 길목에서 이들을 끝까지 부숴 흩어버려야 한다." },
+              { t: "think", c: "부하들의 첫 시험이다. 한 명도 잃지 않고 적을 궤멸시키고 싶다." },
             ],
-            waves: [
-              { threat: 3, desc: [{ t: "narr", c: "제1파. 굶주린 도적 몇이 칼을 들고 달려든다." }] },
-              { threat: 3, desc: [{ t: "narr", c: "제2파. 우두머리가 부하들을 다그치며 밀어붙인다." }] },
-              { threat: 4, desc: [{ t: "danger", c: "제3파. 궁지에 몰린 도적들이 마지막으로 한꺼번에 덤빈다." }] },
-            ],
+            enemy: { name: "패주한 도적 잔당", grade: "도적 무리", maxHp: 90, dmg: 7 },
           },
           {
-            pressure: 18,
             intro: [
-              { t: "danger", c: "두 번째 임무. 남하하는 피난민 행렬을 호위한다. 그러나 그들을 뒤쫓는 건 사람만이 아니다." },
-              { t: "think", c: "지킬 게 늘면, 죽을 자리도 는다. 부하도 피난민도, 둘 다 살려야 한다." },
+              { t: "danger", c: "두 번째 임무. 피난민 행렬을 노리는 약탈자와, 그 뒤를 따라온 마물 떼. 둘 다 쓸어버려야 행렬이 산다." },
+              { t: "think", c: "지킬 게 늘면 죽을 자리도 는다. 그래도, 끝장을 봐야 한다." },
             ],
-            waves: [
-              { threat: 4, desc: [{ t: "narr", c: "제1파. 약탈을 노린 무뢰배들이 행렬 꽁무니를 친다." }] },
-              { threat: 4, desc: [{ t: "danger", c: "제2파. 잿빛 늑대 무리가 피 냄새를 맡고 측면으로 파고든다." }] },
-              { threat: 5, desc: [{ t: "danger", c: "제3파. 변이한 석피 멧돼지 한 마리가 행렬로 돌진해 온다." }] },
-            ],
+            enemy: { name: "약탈자와 마물 떼", grade: "혼성 무리", maxHp: 120, dmg: 9, art: "mob-stonehide-boar" },
           },
           {
-            pressure: 22,
             intro: [
-              { t: "danger", c: "마지막 싸움. 밤하늘의 검은 별이 유난히 또렷한 밤, 흑성에 물든 것들이 전초를 두드린다. 자작군 전체가 긴장한다." },
-              { t: "think", c: "여기서 버티면 겨울을 넘긴다. 못 버티면, 이 변경은 통째로 어둠에 먹힌다." },
+              { t: "danger", c: "마지막 싸움. 검은 별이 유난히 또렷한 밤, 흑성에 물든 것들이 전초로 밀려온다. 부식된 갑옷의 암흑 기사가 그 선두에 섰다." },
+              { t: "think", c: "여기서 저것들을 부수면 겨울을 넘긴다. 못 부수면, 이 변경은 통째로 어둠에 먹힌다." },
             ],
-            waves: [
-              { threat: 5, desc: [{ t: "danger", c: "제1파. 늪지 시체병이 비틀거리며 끝없이 밀려온다." }] },
-              { threat: 5, desc: [{ t: "danger", c: "제2파. 잿빛 까마귀 떼가 하늘을 까맣게 덮고 강하한다." }] },
-              { threat: 6, desc: [{ t: "danger", c: "제3파. 부식된 갑옷의 암흑 기사가 하급 마물을 이끌고 전열을 노린다." }] },
-              { threat: 6, desc: [{ t: "danger", c: "최후의 파도. 동이 트기 직전, 어둠이 마지막 발악을 한다. 한 번만 더 버텨라!" }] },
-            ],
+            enemy: { name: "흑성에 물든 무리", grade: "흑성 마물", maxHp: 165, dmg: 12, art: "mob-darkknight" },
           },
         ],
         onComplete: (G, r) => {
