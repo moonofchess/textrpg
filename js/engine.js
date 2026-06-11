@@ -88,10 +88,19 @@
       // 대부분 별 1개, 가끔 2개, 드물게 3개
       const r = Math.random();
       const skill = r < 0.7 ? 1 : r < 0.95 ? 2 : 3;
-      const maxHp = 16 + skill * 3;
-      const atk = 3 + skill * 2 + Math.floor(Math.random() * 2);
-      const def = 1 + skill + Math.floor(Math.random() * 2);
-      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill, xp: 0, atk: atk, def: def };
+      let maxHp = 16 + skill * 3;
+      let atk = 3 + skill * 2;
+      let def = 1 + skill;
+      // 병사 유형 — 같은 랭크라도 개성을 준다
+      const tw = Math.random();
+      let type, typeKey;
+      if (tw < 0.45) { type = "표준"; typeKey = "balanced"; }
+      else if (tw < 0.65) { type = "맹공"; typeKey = "striker"; atk += 3; def = Math.max(0, def - 1); }
+      else if (tw < 0.85) { type = "방패"; typeKey = "shield"; def += 3; atk = Math.max(1, atk - 1); }
+      else { type = "강골"; typeKey = "tough"; maxHp += 8; }
+      atk += Math.floor(Math.random() * 2);
+      def += Math.floor(Math.random() * 2);
+      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill, xp: 0, atk: atk, def: def, type: type, typeKey: typeKey };
     },
     // 다음 랭크까지 필요한 경험치 (1→2:1, 2→3:3, 3→4:5, 4→5:7)
     xpToNext(skill) { return 2 * skill - 1; },
@@ -143,6 +152,13 @@
   const el = (id) => document.getElementById(id);
   const titleScreen = el("title-screen");
   const gameScreen = el("game-screen");
+
+  function scrollTopView() {
+    const sp = document.querySelector(".story-pane");
+    if (sp) sp.scrollTop = 0;
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  window.SCROLL_TOP = scrollTopView;
 
   // ===== 화면 전환 =====
   function showScreen(which) {
@@ -224,8 +240,8 @@
 
   // ===== 렌더링 =====
   function renderSidebar() {
-    el("phase-tag").textContent = state.phase;
-    el("loc-tag").textContent = state.location;
+    const ptag = el("phase-tag"); if (ptag) ptag.textContent = state.phase;
+    const ltag = el("loc-tag"); if (ltag) ltag.textContent = state.location;
     el("char-status").textContent = state.status;
     el("res-coins").textContent = state.coins;
     el("res-ration").textContent = state.ration;
@@ -327,6 +343,7 @@
       .map((p) => {
         if (typeof p === "string") return '<p class="narr">' + p + "</p>";
         const cls = p.t || "narr";
+        if (cls === "html") return p.c;
         return '<p class="' + cls + '">' + p.c + "</p>";
       })
       .join("");
@@ -392,7 +409,7 @@
       choicesWrap.appendChild(btn);
     });
 
-    el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollTopView();
   }
 
   // ===== 판정 =====

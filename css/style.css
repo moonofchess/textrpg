@@ -129,8 +129,8 @@ body { position: relative; }
 /* ===== 게임 ===== */
 #game-screen { flex-direction: column; }
 .topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 18px; background: linear-gradient(180deg, var(--bg-2), transparent);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 8px 14px; background: linear-gradient(180deg, var(--bg-2), transparent);
   border-bottom: 1px solid var(--line); z-index: 10; flex-shrink: 0;
 }
 .topbar-left { display: flex; gap: 10px; align-items: center; }
@@ -154,11 +154,12 @@ body { position: relative; }
   width: 270px; flex-shrink: 0; background: var(--panel);
   border-right: 1px solid var(--line); padding: 18px; overflow-y: auto;
 }
-.char-card { border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 16px; }
-.char-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.char-card { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 14px; }
+.char-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.char-row + .char-row { margin-top: 6px; }
 .char-name { font-family: "Gowun Batang", serif; font-size: 1.3rem; font-weight: 700; }
 .char-prev { font-size: 0.7rem; color: var(--ink-faint); font-family: "Noto Sans KR"; font-weight: 400; }
-.char-status { font-size: 0.8rem; color: var(--amber-soft); margin-top: 2px; }
+.char-status { font-size: 0.82rem; color: var(--amber-soft); }
 .bag-btn {
   flex-shrink: 0; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
   color: var(--ink-dim); background: var(--bg-2); border: 1px solid var(--line); border-radius: 5px;
@@ -166,7 +167,7 @@ body { position: relative; }
 }
 .bag-btn:hover { color: var(--amber-soft); border-color: var(--amber); }
 .char-btns { display: flex; gap: 6px; flex-shrink: 0; }
-.res-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.res-chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; }
 
 /* 능력치 팝업 */
 .status-body { padding: 18px 20px; overflow-y: auto; }
@@ -410,6 +411,10 @@ body { position: relative; }
 .sol-fill { height: 100%; background: linear-gradient(90deg, #5a201a, var(--blood-soft)); transition: width 0.4s ease; }
 .sol-hp { font-size: 0.7rem; color: var(--ink-dim); text-align: right; font-variant-numeric: tabular-nums; }
 .sol-stat { font-size: 0.68rem; color: var(--amber); text-align: right; margin-top: 1px; }
+.sol-type { font-size: 0.6rem; padding: 1px 5px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--ink-dim); margin-left: 4px; white-space: nowrap; }
+.sol-type.t-striker { color: var(--blood-soft); border-color: var(--blood); }
+.sol-type.t-shield { color: var(--frost); border-color: #3a5560; }
+.sol-type.t-tough { color: var(--green); border-color: #3f4a2a; }
 .rank-block { max-width: 720px; margin-bottom: 12px; }
 .rank-label { font-size: 0.78rem; letter-spacing: 0.06em; color: var(--ink-dim); margin-bottom: 6px; padding-left: 2px; }
 .rank-label.rank1 { color: var(--blood-soft); }
@@ -441,6 +446,30 @@ button.soldier:hover { border-color: var(--amber); transform: translateY(-2px); 
   .stats { flex-direction: row; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 0; }
   .stat { flex: 1; min-width: 130px; }
   .sidebar-only { display: none; }
-  .story-pane { padding: 22px 18px; }
+  .story-pane { padding: 16px 14px; }
   .codex-tabs { width: 120px; }
+
+  /* 분대원 카드: 한 줄에 3명 */
+  .roster { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .soldier { padding: 5px 6px; }
+  .sol-top { display: block; }
+  .sol-name { font-size: 0.7rem; line-height: 1.25; display: inline; }
+  .sol-skill { display: block; font-size: 0.58rem; letter-spacing: -1.5px; margin-top: 1px; }
+  .sol-type { font-size: 0.52rem; padding: 0 3px; margin-left: 3px; }
+  .sol-bar { height: 5px; margin: 3px 0 2px; }
+  .sol-hp { font-size: 0.6rem; }
+  .sol-stat { font-size: 0.58rem; }
+  .rank-block { margin-bottom: 8px; }
+  .rank-label { font-size: 0.72rem; margin-bottom: 4px; }
+
+  /* 전투 화면 간격 축소 */
+  .scene-title { font-size: 1.35rem; }
+  .scene-text { font-size: 1rem; }
+  .cbt-panel, .cmd-panel { padding: 10px 12px; margin-bottom: 10px; }
+  .cbt-art img { max-height: 160px; }
+  .cbt-log { padding-left: 10px; margin-top: 8px; }
+  .cbt-log p { font-size: 0.9rem; margin-bottom: 6px !important; }
+  .cmd-wave p { margin-bottom: 8px; }
+  .choices { gap: 7px; padding-top: 16px; }
+  .choice { padding: 11px 14px; }
 }

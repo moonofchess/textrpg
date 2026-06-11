@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260611g" />
+  <link rel="stylesheet" href="css/style.css?v=20260611j" />
 </head>
 <body>
   <div id="scene-bg"></div>
@@ -40,10 +40,6 @@
   <!-- 게임 화면 -->
   <main id="game-screen" class="screen">
     <header class="topbar">
-      <div class="topbar-left">
-        <span class="phase-tag" id="phase-tag">1부 1페이즈</span>
-        <span class="loc-tag" id="loc-tag">진흙골</span>
-      </div>
       <div class="topbar-right">
         <button class="icon-btn" id="btn-board" title="명예의 전당">전당</button>
         <button class="icon-btn" id="btn-codex" title="설정 열람">설정</button>
@@ -55,11 +51,8 @@
     <div class="game-body">
       <aside class="sidebar">
         <div class="char-card">
-          <div class="char-head">
-            <div class="char-id">
-              <div class="char-name">로완 <span class="char-prev">前 청연</span></div>
-              <div class="char-status" id="char-status">진흙골의 아이</div>
-            </div>
+          <div class="char-row">
+            <div class="char-name">로완 <span class="char-prev">前 청연</span></div>
             <div class="char-btns">
               <button class="bag-btn" id="btn-status" title="능력치 / 상태창" aria-label="능력치">
                 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -73,10 +66,13 @@
               </button>
             </div>
           </div>
-          <div class="res-chips">
-            <span class="chip" title="동전"><span class="chip-k">동전</span><span id="res-coins">0</span></span>
-            <span class="chip" title="배급권"><span class="chip-k">배급</span><span id="res-ration">0</span></span>
-            <span class="chip" title="날"><span class="chip-k">Day</span><span id="res-day">1</span></span>
+          <div class="char-row">
+            <div class="char-status" id="char-status">진흙골의 아이</div>
+            <div class="res-chips">
+              <span class="chip" title="동전"><span class="chip-k">동전</span><span id="res-coins">0</span></span>
+              <span class="chip" title="배급권"><span class="chip-k">배급</span><span id="res-ration">0</span></span>
+              <span class="chip" title="날"><span class="chip-k">Day</span><span id="res-day">1</span></span>
+            </div>
           </div>
         </div>
         <div class="stats" id="stats"></div>
@@ -165,10 +161,10 @@
   <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/cloud.js?v=20260611g"></script>
-  <script src="js/story.js?v=20260611g"></script>
-  <script src="js/codex.js?v=20260611g"></script>
-  <script src="js/combat.js?v=20260611g"></script>
-  <script src="js/engine.js?v=20260611g"></script>
+  <script src="js/cloud.js?v=20260611j"></script>
+  <script src="js/story.js?v=20260611j"></script>
+  <script src="js/codex.js?v=20260611j"></script>
+  <script src="js/combat.js?v=20260611j"></script>
+  <script src="js/engine.js?v=20260611j"></script>
 </body>
 </html>

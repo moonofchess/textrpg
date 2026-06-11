@@ -1663,13 +1663,8 @@ const STORY = {
           { t: "narr", c: "모닥불 가, 부하들이 창을 손질하고 상처를 싸맨다. 다음 싸움 전에 해 둘 일을 챙긴다." },
           { t: "sys", c: "다가오는 교전: " + idx + " / 3" },
         ];
-        const roster = (G.s.squad || []).map((s) => {
-          const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
-          const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
-          const def = s.def != null ? s.def : 1 + s.skill;
-          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 공" + atk + " 방" + def + " 훈련 " + xpInfo + ")";
-        }).join("  ·  ");
-        arr.push({ t: "sys", c: "분대: " + (roster || "없음") });
+        arr.push({ t: "sys", c: "분대 " + (G.s.squad || []).length + "명" });
+        arr.push({ t: "html", c: window.rosterHTML ? window.rosterHTML(G.s.squad || []) : "" });
         return arr;
       },
       choices: (G) => STORY._campChoices(G, "squad_camp", "skirmish", "squad_quarter", "squad_recruit"),
@@ -1689,6 +1684,7 @@ const STORY = {
       text: (G) => [
         { t: "narr", c: "막사 입구, 일자리를 찾는 떠돌이들이 기웃거린다. 누구를 거두고 누구를 내보낼지는 지휘관의 몫이다." },
         { t: "sys", c: "분대 " + (G.s.squad || []).length + " / 정원 " + (G.s.squadCap || 10) + " · 동전 " + G.s.coins + "닢" },
+        { t: "html", c: window.rosterHTML ? window.rosterHTML(G.s.squad || []) : "" },
       ],
       choices: (G) => STORY._recruitChoices(G, "squad_recruit", "squad_camp"),
     },
@@ -1818,13 +1814,8 @@ const STORY = {
           { t: "narr", c: "모닥불 가, 부하들이 무기를 손질하며 다음 적을 기다린다." },
           { t: "sys", c: "다가오는 적: 제 " + stage + " 진 · 최고 기록 " + (G.s.endlessBest || 0) + " 진" },
         ];
-        const roster = (G.s.squad || []).map((s) => {
-          const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
-          const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
-          const def = s.def != null ? s.def : 1 + s.skill;
-          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 공" + atk + " 방" + def + " 훈련 " + xpInfo + ")";
-        }).join("  ·  ");
-        arr.push({ t: "sys", c: "분대 (" + (G.s.squad || []).length + "명): " + (roster || "없음") });
+        arr.push({ t: "sys", c: "분대 " + (G.s.squad || []).length + "명 / 정원 " + (G.s.squadCap || 10) });
+        arr.push({ t: "html", c: window.rosterHTML ? window.rosterHTML(G.s.squad || []) : "" });
         return arr;
       },
       choices: (G) => STORY._campChoices(G, "endless_camp", "endless_battle", "endless_quarter", "endless_recruit"),
@@ -1844,6 +1835,7 @@ const STORY = {
       text: (G) => [
         { t: "narr", c: "끝없는 싸움터에도 굶주린 떠돌이는 모여든다. 누구를 거두고 누구를 내보낼지 정한다." },
         { t: "sys", c: "분대 " + (G.s.squad || []).length + " / 정원 " + (G.s.squadCap || 10) + " · 동전 " + G.s.coins + "닢" },
+        { t: "html", c: window.rosterHTML ? window.rosterHTML(G.s.squad || []) : "" },
       ],
       choices: (G) => STORY._recruitChoices(G, "endless_recruit", "endless_camp"),
     },

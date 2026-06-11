@@ -26,7 +26,7 @@
   function logHTML(arr) {
     return (
       '<div class="cbt-log">' +
-      arr.slice(-8).map((p) => '<p class="' + (p.t || "narr") + '">' + p.c + "</p>").join("") +
+      arr.slice(-6).map((p) => '<p class="' + (p.t || "narr") + '">' + p.c + "</p>").join("") +
       "</div>"
     );
   }
@@ -41,6 +41,7 @@
   const FX = {
     flash(kind) {
       const f = document.getElementById("fx-flash");
+      if (navigator.vibrate) { try { navigator.vibrate(kind === "hit" ? 25 : kind === "enemy" ? 12 : 0); } catch (e) {} }
       if (!f) return;
       f.className = "";
       void f.offsetWidth;
@@ -155,7 +156,7 @@
       actionBtn(cw, "공격", "틈을 실어 약점을 친다", () => self._act("strike"));
       actionBtn(cw, "방어", "이번 피해를 크게 줄인다", () => self._act("brace"));
       actionBtn(cw, "관찰", "틈 +2 (피해 감수)", () => self._act("observe"));
-      el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SCROLL_TOP) window.SCROLL_TOP();
     },
 
     _bonus() {
@@ -307,7 +308,7 @@
         actionBtn(cw, "“진흙 발라, 골목으로 유인!” — 매복", "눈치 판정 · 대박/쪽박", () => self._order("ambush"));
         actionBtn(cw, "“보급로로, 천천히 물러나!” — 질서 후퇴", "병력 보존 · 사기 회복", () => self._order("retreat"));
       }
-      el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SCROLL_TOP) window.SCROLL_TOP();
     },
 
     _order(order) {
@@ -439,7 +440,8 @@
     const attr = clickable ? ' data-name="' + s.name.replace(/"/g, "") + '"' : "";
     const atk = s.atk != null ? s.atk : 3 + s.skill * 2;
     const def = s.def != null ? s.def : 1 + s.skill;
-    return "<" + tag + ' class="' + cls + '"' + attr + '><div class="sol-top"><span class="sol-name">' + s.name +
+    const typeTag = s.type ? ' <span class="sol-type t-' + (s.typeKey || "") + '">' + s.type + "</span>" : "";
+    return "<" + tag + ' class="' + cls + '"' + attr + '><div class="sol-top"><span class="sol-name">' + s.name + typeTag +
       '</span><span class="sol-skill">' + stars + "</span></div>" +
       '<div class="sol-bar"><div class="sol-fill" style="width:' + pct + '%"></div></div>' +
       '<div class="sol-hp">' + Math.max(0, s.hp) + " / " + s.maxHp + '</div>' +
@@ -504,7 +506,7 @@
         if (!self._rank(1).length) { self._living().forEach((s) => s.rank = 1); }
         st.phase = "battle"; self._renderBattle();
       });
-      el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SCROLL_TOP) window.SCROLL_TOP();
     },
 
     // ---- 전투 단계 ----
@@ -538,7 +540,7 @@
       actionBtn(cw, "▶ 명령 실행", "선택한 대로 한 합 싸운다", () => self._turn("orders"));
       actionBtn(cw, "진형 교대", "1열↔2열 · 이번 합 방어적", () => self._turn("swap"));
       actionBtn(cw, "사기 진작", "허기 소모 · 사기 +25", () => self._turn("rally"));
-      el("scene-text").scrollIntoView({ behavior: "smooth", block: "start" });
+      if (window.SCROLL_TOP) window.SCROLL_TOP();
     },
 
     _turn(order) {
@@ -568,6 +570,14 @@
         } else {
           log.push({ t: "bad", c: "외칠 기운조차 없다. 허기가 발목을 잡는다." });
         }
+      }
+
+      // 진형 교대·사기 진작은 턴을 소모하지 않는다 (적 반격 없음)
+      if (order === "swap" || order === "rally") {
+        window.REFRESH_SIDEBAR && window.REFRESH_SIDEBAR();
+        st.log.push(...log);
+        this._renderBattle();
+        return;
       }
 
       // 아군 공격 → 적 부대 체력
