@@ -50,6 +50,22 @@ const STORY = {
     "절름발이 콜", "말더듬이 운트", "북부 사내 그림", "고아 닐스",
   ],
 
+  // 무한 전투 모드에 등장하는 적 (순환하며 점점 강해진다)
+  endlessFoes: [
+    { name: "굶주린 도적단", art: "mob-bandit-horde", flavor: "또 사람이다. 굶주림에 미쳐 칼을 든 자들." },
+    { name: "잿빛 늑대 대군", art: "mob-ashwolf", flavor: "붉은 눈이 수십 쌍. 무리가 평소의 몇 배다." },
+    { name: "비늘몸 떼", art: "mob-scalecrawler", flavor: "비늘이 달빛에 번들거린다. 자주색 개체가 섞였다." },
+    { name: "늪지 시체병 군세", art: "mob-marsh-corpse", flavor: "느리지만 끝이 없다. 베어도 베어도 일어선다." },
+    { name: "잿빛 까마귀 떼", art: "mob-ashcrow", flavor: "하늘이 검게 덮인다. 강하 직전의 합창이 울린다." },
+    { name: "늪귀 무리", art: "mob-swampwraith", flavor: "사람 우는 소리가 사방에서 들린다. 전부 미끼다." },
+    { name: "흑성 광신도 무리", art: "mob-cultist", flavor: "“멸망이야말로 구원이다!” 눈이 검게 물든 자들." },
+    { name: "암흑 기사단", art: "mob-darkknight", flavor: "부식된 갑옷이 줄지어 선다. 죽은 기사들의 행군." },
+    { name: "속삭이는 갑옷", art: "mob-whispering-armor", flavor: "빈 갑옷이 저 혼자 움직이며 죽은 자의 목소리로 속삭인다." },
+    { name: "뿌리 인간 군락", art: "mob-rootman", flavor: "폐허에서 자라난 것들이 사람 목소리로 도움을 청한다." },
+    { name: "죽지 않는 기사", art: "mob-undying-knight", flavor: "흑성에 오염된 옛 용사. 명예와 살육이 뒤섞인 괴물." },
+    { name: "검은 성자의 그림자", art: "mob-black-saint-shadow", flavor: "걸어오는 흑성. 가까이 있는 것만으로 정신이 갈린다." },
+  ],
+
   // 위치 → 배경 일러스트 (장면에 bg가 없으면 위치로 결정)
   bgByLocation: {
     "진흙골": "bg-mudhollow",
@@ -1684,8 +1700,162 @@ const STORY = {
         return arr;
       },
       choices: [
+        { text: "▶ 무한 전투 모드에 돌입한다. (끝없이 강해지는 적)", continue: true, next: "endless_intro" },
         { text: "여기까지의 여정을 되새긴다. (타이틀로)", action: "title" },
         { text: "처음부터 다시 시작한다.", action: "restart" },
+      ],
+    },
+
+    /* =====================================================
+       무한 전투 모드 — 끝없이 강해지는 적
+       ===================================================== */
+    endless_intro: {
+      title: "끝없는 겨울",
+      phase: "무한 전투",
+      location: "그레이마치 변경",
+      onEnter: (G) => {
+        if (!G.s.squad || !G.s.squad.length) G.initSquad(10);
+        G.s.endlessStage = 0;
+        G.setFlag("endless_mode");
+      },
+      text: [
+        { t: "narr", c: "전쟁은 끝나지 않는다. 한 무리를 부수면 다음 무리가 밀려온다. 흑성은 더 짙어지고, 어둠은 더 자주 토해낸다." },
+        { t: "narr", c: "로완은 분대를 추슬러 변경의 길목에 진을 친다. 얼마나 버틸 수 있을지는, 아무도 모른다." },
+        { t: "sys", c: "무한 전투: 적은 진(陣)을 거듭할수록 강해진다. 분대가 전멸할 때까지, 몇 진까지 막아내는지 도전한다." },
+        { t: "think", c: "끝이 없다는 걸 안다. 그래도 한 진이라도 더. 한 명이라도 더 데리고." },
+      ],
+      choices: [
+        { text: "진을 친다.", continue: true, next: "endless_camp" },
+      ],
+    },
+
+    endless_camp: {
+      title: "진중 — 다음 적을 기다리며",
+      onEnter: (G) => { G.s.campPrepped = false; },
+      text: (G) => {
+        const stage = (G.s.endlessStage || 0) + 1;
+        const arr = [
+          { t: "narr", c: "모닥불 가, 부하들이 무기를 손질하며 다음 적을 기다린다." },
+          { t: "sys", c: "다가오는 적: 제 " + stage + " 진 · 최고 기록 " + (G.s.endlessBest || 0) + " 진" },
+        ];
+        const roster = (G.s.squad || []).map((s) => s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + ")").join("  ·  ");
+        arr.push({ t: "sys", c: "분대 (" + (G.s.squad || []).length + "명): " + (roster || "없음") });
+        return arr;
+      },
+      choices: (G) => {
+        const woundedMost = (g) => {
+          let w = null;
+          (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; });
+          return w;
+        };
+        const c = [];
+        c.push({
+          text: "부대를 쉬게 한다. (전원 체력 회복)",
+          enabled: (g) => !g.s.campPrepped,
+          lockedText: "이번 진 준비는 끝났다",
+          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 14); }); },
+          outcome: { type: "neutral", text: "잠깐의 숨 고르기. 부하들의 핏기가 조금 돌아온다." },
+          next: "endless_camp",
+        });
+        c.push({
+          text: "사비를 털어 회식한다. (10닢, 전원 완쾌)",
+          enabled: (g) => g.s.coins >= 10 && !g.s.campPrepped,
+          lockedText: (G.s.campPrepped ? "이번 진 준비는 끝났다" : "동전 부족"),
+          effect: (g) => { if (g.spend(10)) { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); } },
+          outcome: { type: "good", text: "고기 굽는 냄새가 진중에 퍼진다. 배부른 병사들의 눈에 생기가 돈다." },
+          next: "endless_camp",
+        });
+        c.push({
+          text: "약초를 산다. (6닢)",
+          enabled: (g) => g.s.coins >= 6,
+          lockedText: "동전 부족",
+          effect: (g) => { if (g.spend(6)) g.addSupply("herbs", 1); },
+          outcome: { type: "neutral", text: "떠돌이 보급상에게서 약초 한 꾸러미를 산다." },
+          next: "endless_camp",
+        });
+        c.push({
+          text: "가장 다친 병사에게 약초를 쓴다.",
+          show: (g) => g.supplyCount("herbs") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
+          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 20); g.s.supplies.herbs -= 1; if (g.s.supplies.herbs <= 0) delete g.s.supplies.herbs; },
+          outcome: { type: "good", text: "가장 성치 않은 병사의 상처에 약초를 짓이겨 바른다." },
+          next: "endless_camp",
+        });
+        c.push({ text: "출진한다. 다음 진을 맞는다.", continue: true, next: "endless_battle" });
+        return c;
+      },
+    },
+
+    endless_battle: {
+      bg: "bg-battlefield-night",
+      onEnter: (G) => { if (!G.s.squad || !G.s.squad.length) G.initSquad(10); },
+      skirmish: {
+        makeBattle: (G) => {
+          const stage = G.s.endlessStage || 0;
+          const foes = STORY.endlessFoes;
+          const t = foes[stage % foes.length];
+          const cycle = Math.floor(stage / foes.length);
+          const maxHp = 90 + stage * 32 + cycle * 45;
+          const dmg = 7 + Math.round(stage * 1.7) + cycle * 2;
+          return {
+            morale: 60,
+            intro: [
+              { t: "danger", c: "제 " + (stage + 1) + " 진(陣). " + t.name + "이(가) 밀려온다." },
+              { t: "think", c: t.flavor || "끝이 없다. 그저 다음 적이 올 뿐." },
+            ],
+            enemy: { name: t.name, grade: "제 " + (stage + 1) + " 진", maxHp: maxHp, dmg: dmg, art: t.art },
+          };
+        },
+        onComplete: (G, r) => {
+          if (r.result === "held") {
+            G.s.endlessStage = (G.s.endlessStage || 0) + 1;
+            if (G.s.endlessStage > (G.s.endlessBest || 0)) G.s.endlessBest = G.s.endlessStage;
+            G.s.lastDead = r.dead;
+            G.addCoins(10 + G.s.endlessStage * 2);
+            G.mod("reputation", 3);
+            return "endless_after";
+          }
+          return "endless_defeat";
+        },
+      },
+    },
+
+    endless_after: {
+      title: "한 진을 넘기고",
+      onEnter: (G) => {
+        if ((G.s.squad || []).length < 10) { const r = G.recruit(); G.s.lastRecruit = r.name; }
+        else G.s.lastRecruit = null;
+      },
+      text: (G) => {
+        const arr = [
+          { t: "narr", c: "적이 모두 쓰러졌다. 잠깐의 정적. 하지만 멀리서 또 다른 발소리가 들려온다." },
+          { t: "sys", c: "제 " + (G.s.endlessStage || 0) + " 진 돌파 · 최고 기록 " + (G.s.endlessBest || 0) + " 진" },
+        ];
+        const dead = G.s.lastDead || [];
+        if (dead.length) arr.push({ t: "sys", c: "전사: " + dead.join(", ") });
+        if (G.s.lastRecruit) arr.push({ t: "narr", c: "빈자리를 메우러 신병 " + G.s.lastRecruit + "이(가) 합류했다." });
+        return arr;
+      },
+      choices: [
+        { text: "진을 다시 추스른다.", continue: true, next: "endless_camp" },
+      ],
+    },
+
+    endless_defeat: {
+      title: "마지막 진",
+      onEnter: (G) => { G.mod("health", 8); },
+      text: (G) => [
+        { t: "danger", c: "마침내 분대가 무너졌다. 마지막 한 명이 쓰러지는 것을, 로완은 끝까지 지켜본다." },
+        { t: "sys", c: "최종 기록: 제 " + (G.s.endlessStage || 0) + " 진까지 막아냈다. (최고 기록 " + (G.s.endlessBest || 0) + " 진)" },
+        { t: "think", c: "끝이 없는 싸움이었다. 그래도 여기까지 끌고 온 이름들이 있었다. 그걸로 됐다." },
+      ],
+      choices: [
+        {
+          text: "새 분대를 꾸려 다시 도전한다.",
+          effect: (G) => { G.initSquad(10); G.s.endlessStage = 0; },
+          continue: true,
+          next: "endless_camp",
+        },
+        { text: "여기서 그만둔다. (타이틀로)", action: "title" },
       ],
     },
 

@@ -447,7 +447,7 @@
     start(config) {
       const G = window.G;
       const idx = config.useIndex ? (G.s.skirmishIndex || 0) : 0;
-      const battle = config.battles[idx] || config.battles[config.battles.length - 1];
+      const battle = config.makeBattle ? config.makeBattle(G) : (config.battles[idx] || config.battles[config.battles.length - 1]);
       this._cfg = config;
       this._battle = battle;
       // 진형 초기화: rank 미지정 병사는 앞 5명 1열, 나머지 2열
