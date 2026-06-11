@@ -88,7 +88,20 @@
       const r = Math.random();
       const skill = r < 0.7 ? 1 : r < 0.95 ? 2 : 3;
       const maxHp = 16 + skill * 3;
-      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill };
+      return { name: name, hp: maxHp, maxHp: maxHp, skill: skill, xp: 0 };
+    },
+    // 다음 랭크까지 필요한 훈련 경험치 (1→2:1, 2→3:3, 3→4:5, 4→5:7)
+    xpToNext(skill) { return 2 * skill - 1; },
+    trainSquad() {
+      let leveled = 0;
+      (state.squad || []).forEach((s) => {
+        if (s.hp <= 0) return;
+        s.xp = (s.xp || 0) + 1;
+        while (s.skill < 5 && s.xp >= G.xpToNext(s.skill)) { s.xp -= G.xpToNext(s.skill); s.skill++; leveled++; }
+        if (s.skill >= 5) s.xp = 0;
+      });
+      if (leveled > 0) G.toast(leveled + "명의 기량 ★이 올랐다!");
+      return leveled;
     },
     initSquad(n) {
       state.squad = [];

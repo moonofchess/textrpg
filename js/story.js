@@ -76,6 +76,75 @@ const STORY = {
     "칼덴 군영 · 외곽": "bg-calden-camp",
   },
 
+  // 막사(출진 전) 공용 선택지 — selfScene으로 되돌아오며, 전투/상점 씬으로 분기
+  _campChoices: function (G, selfScene, battleScene, quarterScene) {
+    const woundedMost = (g) => { let w = null; (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; }); return w; };
+    const c = [];
+    c.push({
+      text: "전 부대를 훈련시킨다. (경험치 +1)",
+      enabled: (g) => !g.s.campTrained && (g.s.squad || []).some((s) => s.skill < 5),
+      lockedText: "이번 출진 훈련은 끝났다",
+      effect: (g) => { g.s.campTrained = true; g.trainSquad(); g.mod("hunger", -8); },
+      outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 고된 훈련이 손끝에 쌓인다. (경험치가 차면 기량 ★이 오른다)" },
+      next: selfScene,
+    });
+    c.push({
+      text: "부대를 쉬게 한다. (전원 체력 회복)",
+      enabled: (g) => !g.s.campRested,
+      lockedText: "이번 출진 회복은 끝났다",
+      effect: (g) => { g.s.campRested = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 14); }); },
+      outcome: { type: "neutral", text: "모닥불 곁에서 언 몸을 녹이고 상처를 싸맨다. 부하들의 핏기가 조금 돌아온다." },
+      next: selfScene,
+    });
+    c.push({
+      text: "사비를 털어 회식한다. (10닢, 전원 완쾌)",
+      enabled: (g) => g.s.coins >= 10 && !g.s.campRested,
+      lockedText: (G.s.campRested ? "이번 출진 회복은 끝났다" : "동전 부족"),
+      effect: (g) => { if (g.spend(10)) { g.s.campRested = true; (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); g.mod("reputation", 2); } },
+      outcome: { type: "good", text: "고기 굽는 냄새가 막사에 퍼진다. 배부른 병사들의 눈에 생기가 돈다." },
+      next: selfScene,
+    });
+    c.push({
+      text: "가장 다친 병사에게 약초를 쓴다.",
+      show: (g) => g.supplyCount("herbs") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
+      effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 20); g.s.supplies.herbs -= 1; if (g.s.supplies.herbs <= 0) delete g.s.supplies.herbs; },
+      outcome: { type: "good", text: "가장 성치 않은 병사의 상처에 약초를 짓이겨 바른다." },
+      next: selfScene,
+    });
+    c.push({
+      text: "가장 다친 병사를 붕대로 싸맨다.",
+      show: (g) => g.supplyCount("bandage") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
+      effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 14); g.s.supplies.bandage -= 1; if (g.s.supplies.bandage <= 0) delete g.s.supplies.bandage; },
+      outcome: { type: "neutral", text: "피 밴 천을 단단히 둘러 출혈을 막는다." },
+      next: selfScene,
+    });
+    if (quarterScene) c.push({ text: "보급 — 물자를 산다. (상점)", next: quarterScene });
+    c.push({ text: "출진한다.", continue: true, next: battleScene });
+    return c;
+  },
+
+  // 보급(상점) 공용 선택지 — selfScene으로 되돌아오며 returnScene으로 나간다
+  _shopChoices: function (G, selfScene, returnScene) {
+    const buy = (label, price, fn) => ({
+      text: label + " — " + price + "닢",
+      enabled: (g) => g.s.coins >= price, lockedText: "동전 부족",
+      effect: (g) => { if (g.spend(price)) fn(g); },
+      outcome: { type: "good", text: "값을 치르고 물건을 챙긴다." },
+      next: selfScene,
+    });
+    const list = [
+      buy("검은 빵", 3, (g) => g.addSupply("bread", 1)),
+      buy("말린 고기", 4, (g) => g.addSupply("jerky", 1)),
+      buy("붕대", 4, (g) => g.addSupply("bandage", 1)),
+      buy("약초 꾸러미", 6, (g) => g.addSupply("herbs", 1)),
+      buy("기름 횃불", 5, (g) => g.addSupply("oiled_torch", 1)),
+    ];
+    if (!G.has("jerkin")) list.push(buy("낡은 가죽 흉갑 (받는 피해 감소)", 18, (g) => g.give("jerkin")));
+    if (!G.has("whetstone")) list.push(buy("숫돌 (주는 피해 증가)", 12, (g) => g.give("whetstone")));
+    list.push({ text: "보급을 마친다.", next: returnScene });
+    return list;
+  },
+
   scenes: {
     /* ---------- 캐릭터 메이킹: 전생의 회상 ---------- */
     creation_intro: {
@@ -1545,7 +1614,7 @@ const STORY = {
         arr.push({ t: "think", c: "강한 부대를 만들 재주는 없다. 그저 한 명이라도 덜 죽이고 싶을 뿐이다." });
         return arr;
       },
-      onEnter: (G) => { G.s.campPrepped = false; },
+      onEnter: (G) => { G.s.campTrained = false; G.s.campRested = false; },
       choices: [
         { text: "막사로 가 부대를 점검한다.", continue: true, next: "squad_camp" },
       ],
@@ -1559,59 +1628,23 @@ const STORY = {
           { t: "narr", c: "모닥불 가, 부하들이 창을 손질하고 상처를 싸맨다. 다음 싸움 전에 해 둘 일을 챙긴다." },
           { t: "sys", c: "다가오는 교전: " + idx + " / 3" },
         ];
-        const roster = (G.s.squad || []).map((s) => s.name + " (체력 " + s.hp + "/" + s.maxHp + ", 기량 ★" + s.skill + ")").join("  ·  ");
+        const roster = (G.s.squad || []).map((s) => {
+          const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
+          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 훈련 " + xpInfo + ")";
+        }).join("  ·  ");
         arr.push({ t: "sys", c: "분대: " + (roster || "없음") });
         return arr;
       },
-      choices: (G) => {
-        const woundedMost = (g) => {
-          let w = null;
-          (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; });
-          return w;
-        };
-        const c = [];
-        c.push({
-          text: "전 부대를 혹독하게 굴린다. (기량 ★ +1, 평생 한 번)",
-          show: (g) => !g.flag("squad_drilled"),
-          enabled: (g) => !g.s.campPrepped,
-          lockedText: "출진 준비는 한 번뿐이다",
-          effect: (g) => { g.setFlag("squad_drilled"); g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.skill = Math.min(5, s.skill + 1); }); g.mod("hunger", -8); },
-          outcome: { type: "good", text: "진창에서 창을 내지르고 방패를 맞댄다. 욕설과 신음 끝에, 부하들의 손놀림이 한결 야물어졌다. 하지만 이런 강훈련은 두 번 다시 짜낼 여유가 없다." },
-          next: "squad_camp",
-        });
-        c.push({
-          text: "부대를 쉬게 한다. (전원 체력 회복)",
-          enabled: (g) => !g.s.campPrepped,
-          lockedText: "출진 준비는 한 번뿐이다",
-          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 12); }); },
-          outcome: { type: "neutral", text: "모닥불 곁에서 언 몸을 녹이고 상처를 싸맨다. 잠깐의 평온이 부하들의 핏기를 돌려놓는다." },
-          next: "squad_camp",
-        });
-        c.push({
-          text: "가장 다친 병사에게 약초를 쓴다.",
-          show: (g) => g.supplyCount("herbs") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
-          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 20); g.s.supplies.herbs -= 1; if (g.s.supplies.herbs <= 0) delete g.s.supplies.herbs; },
-          outcome: { type: "good", text: "가장 성치 않은 병사의 상처에 약초를 짓이겨 바른다." },
-          next: "squad_camp",
-        });
-        c.push({
-          text: "가장 다친 병사를 붕대로 싸맨다.",
-          show: (g) => g.supplyCount("bandage") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
-          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 14); g.s.supplies.bandage -= 1; if (g.s.supplies.bandage <= 0) delete g.s.supplies.bandage; },
-          outcome: { type: "neutral", text: "피 밴 천을 단단히 둘러 출혈을 막는다." },
-          next: "squad_camp",
-        });
-        c.push({
-          text: "사비를 털어 술과 고기로 회식한다. (10닢, 전원 완쾌)",
-          enabled: (g) => g.s.coins >= 10 && !g.s.campPrepped,
-          lockedText: (G.s.campPrepped ? "출진 준비는 한 번뿐이다" : "동전 부족"),
-          effect: (g) => { if (g.spend(10)) { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); g.mod("reputation", 3); } },
-          outcome: { type: "good", text: "오랜만에 고기 굽는 냄새가 막사에 퍼진다. 배부른 병사들의 눈에 생기가 돈다. 지휘관이 제 주머니를 여는 걸, 병사들은 잊지 않는다." },
-          next: "squad_camp",
-        });
-        c.push({ text: "출진한다. 다음 교전으로.", continue: true, next: "skirmish" });
-        return c;
-      },
+      choices: (G) => STORY._campChoices(G, "squad_camp", "skirmish"),
+    },
+
+    squad_quarter: {
+      title: "보급 — 종군 상인",
+      text: (G) => [
+        { t: "narr", c: "막사 뒤편, 종군 상인이 수레를 풀어 물자를 늘어놓는다." },
+        { t: "sys", c: "가진 동전: " + G.s.coins + "닢" },
+      ],
+      choices: (G) => STORY._shopChoices(G, "squad_quarter", "squad_camp"),
     },
 
     skirmish: {
@@ -1654,7 +1687,7 @@ const STORY = {
     skirmish_after: {
       title: "교전이 끝나고",
       onEnter: (G) => {
-        G.s.campPrepped = false;
+        G.s.campTrained = false; G.s.campRested = false;
         G.mod("hunger", -5); G.addRation(1);
         if ((G.s.skirmishIndex || 0) < 3 && (G.s.squad || []).length < 10) {
           const r = G.recruit();
@@ -1716,6 +1749,7 @@ const STORY = {
       onEnter: (G) => {
         if (!G.s.squad || !G.s.squad.length) G.initSquad(10);
         G.s.endlessStage = 0;
+        G.s.campTrained = false; G.s.campRested = false;
         G.setFlag("endless_mode");
       },
       text: [
@@ -1731,58 +1765,29 @@ const STORY = {
 
     endless_camp: {
       title: "진중 — 다음 적을 기다리며",
-      onEnter: (G) => { G.s.campPrepped = false; },
       text: (G) => {
         const stage = (G.s.endlessStage || 0) + 1;
         const arr = [
           { t: "narr", c: "모닥불 가, 부하들이 무기를 손질하며 다음 적을 기다린다." },
           { t: "sys", c: "다가오는 적: 제 " + stage + " 진 · 최고 기록 " + (G.s.endlessBest || 0) + " 진" },
         ];
-        const roster = (G.s.squad || []).map((s) => s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + ")").join("  ·  ");
+        const roster = (G.s.squad || []).map((s) => {
+          const xpInfo = s.skill >= 5 ? "MAX" : ((s.xp || 0) + "/" + (2 * s.skill - 1));
+          return s.name + " (체력 " + s.hp + "/" + s.maxHp + ", ★" + s.skill + " 훈련 " + xpInfo + ")";
+        }).join("  ·  ");
         arr.push({ t: "sys", c: "분대 (" + (G.s.squad || []).length + "명): " + (roster || "없음") });
         return arr;
       },
-      choices: (G) => {
-        const woundedMost = (g) => {
-          let w = null;
-          (g.s.squad || []).forEach((s) => { if (s.hp < s.maxHp && (!w || (s.maxHp - s.hp) > (w.maxHp - w.hp))) w = s; });
-          return w;
-        };
-        const c = [];
-        c.push({
-          text: "부대를 쉬게 한다. (전원 체력 회복)",
-          enabled: (g) => !g.s.campPrepped,
-          lockedText: "이번 진 준비는 끝났다",
-          effect: (g) => { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = Math.min(s.maxHp, s.hp + 14); }); },
-          outcome: { type: "neutral", text: "잠깐의 숨 고르기. 부하들의 핏기가 조금 돌아온다." },
-          next: "endless_camp",
-        });
-        c.push({
-          text: "사비를 털어 회식한다. (10닢, 전원 완쾌)",
-          enabled: (g) => g.s.coins >= 10 && !g.s.campPrepped,
-          lockedText: (G.s.campPrepped ? "이번 진 준비는 끝났다" : "동전 부족"),
-          effect: (g) => { if (g.spend(10)) { g.s.campPrepped = true; (g.s.squad || []).forEach((s) => { s.hp = s.maxHp; }); } },
-          outcome: { type: "good", text: "고기 굽는 냄새가 진중에 퍼진다. 배부른 병사들의 눈에 생기가 돈다." },
-          next: "endless_camp",
-        });
-        c.push({
-          text: "약초를 산다. (6닢)",
-          enabled: (g) => g.s.coins >= 6,
-          lockedText: "동전 부족",
-          effect: (g) => { if (g.spend(6)) g.addSupply("herbs", 1); },
-          outcome: { type: "neutral", text: "떠돌이 보급상에게서 약초 한 꾸러미를 산다." },
-          next: "endless_camp",
-        });
-        c.push({
-          text: "가장 다친 병사에게 약초를 쓴다.",
-          show: (g) => g.supplyCount("herbs") > 0 && (g.s.squad || []).some((s) => s.hp < s.maxHp),
-          effect: (g) => { const w = woundedMost(g); if (w) w.hp = Math.min(w.maxHp, w.hp + 20); g.s.supplies.herbs -= 1; if (g.s.supplies.herbs <= 0) delete g.s.supplies.herbs; },
-          outcome: { type: "good", text: "가장 성치 않은 병사의 상처에 약초를 짓이겨 바른다." },
-          next: "endless_camp",
-        });
-        c.push({ text: "출진한다. 다음 진을 맞는다.", continue: true, next: "endless_battle" });
-        return c;
-      },
+      choices: (G) => STORY._campChoices(G, "endless_camp", "endless_battle", "endless_quarter"),
+    },
+
+    endless_quarter: {
+      title: "보급 — 떠돌이 보급상",
+      text: (G) => [
+        { t: "narr", c: "전쟁이 나는 곳엔 늘 보급상이 따라붙는다. 수레 가득 잡동사니를 풀어놓는다." },
+        { t: "sys", c: "가진 동전: " + G.s.coins + "닢" },
+      ],
+      choices: (G) => STORY._shopChoices(G, "endless_quarter", "endless_camp"),
     },
 
     endless_battle: {
@@ -1822,6 +1827,7 @@ const STORY = {
     endless_after: {
       title: "한 진을 넘기고",
       onEnter: (G) => {
+        G.s.campTrained = false; G.s.campRested = false;
         if ((G.s.squad || []).length < 10) { const r = G.recruit(); G.s.lastRecruit = r.name; }
         else G.s.lastRecruit = null;
       },
